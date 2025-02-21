@@ -1,5 +1,9 @@
 # PipeEx
-PipeEx is a simple yet powerful library that provides extension methods for creating a fluent, pipe-like syntax in C#.  It allows you to chain function calls together in a readable and expressive way, improving code clarity and maintainability.
+[![.NET](https://github.com/timonkrebs/PipeEx/actions/workflows/dotnet.yml/badge.svg)](https://github.com/timonkrebs/PipeEx/actions/workflows/dotnet.yml)
+[![NuGet](https://img.shields.io/nuget/dt/PipeEx.svg)](https://www.nuget.org/packages/PipeEx) 
+[![NuGet](https://img.shields.io/nuget/vpre/PipeEx.svg)](https://www.nuget.org/packages/PipeEx)
+
+PipeEx is a simple library that provides extension methods for creating a fluent, pipe-like syntax in C#.  It allows you to chain function calls together in a readable and expressive way, improving code clarity and maintainability.
 
 ## What is it?
 
@@ -11,14 +15,21 @@ PipeEx introduces the `I` (Infer) extension method, which acts as a "pipe" opera
 The core of PipeEx is the `I` extension method.
 ```cs
 
-await funcX().I(funcY)
-             .I(x => x + 2)
+public int Calc(int x) => x.I(FuncY)
+                           .I(x => x + 2);
+
+// you do not have to await manually
+public Task<int> Calc(int x) => x.I(FuncAsync)
+                                 .I(x => x + 2)
+                                 .I(FuncYAsync)
+                                 .I(Func);
 ```
 
 ## Features
-Fluent Syntax: Enables a clean and readable way to chain function calls.
-Asynchronous Support: Works seamlessly with both synchronous and asynchronous operations (Task<T>).
-Simplified Code: Reduces nesting and improves code maintainability.
-Lightweight: A small and focused library with minimal dependencies.
+- **Fluent Syntax**: Enables a clean and readable way to chain function calls.
+- **Asynchronous Support**: Works seamlessly with both synchronous and asynchronous operations (Task<T>).
+- **Simplified Code**: Reduces nesting and improves code maintainability.
+- **Lightweight**: A small and focused library with minimal dependencies.
+  
 ## Contributing
 Contributions are welcome!  Feel free to submit pull requests or open issues.
