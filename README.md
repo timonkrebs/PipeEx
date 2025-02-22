@@ -3,7 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/dt/PipeEx.svg)](https://www.nuget.org/packages/PipeEx) 
 [![NuGet](https://img.shields.io/nuget/vpre/PipeEx.svg)](https://www.nuget.org/packages/PipeEx)
 
-PipeEx is a simple library that provides extension methods for creating a fluent, pipe-like syntax in C#.  It allows you to chain function calls together in a readable and expressive way, improving code clarity and maintainability.
+PipeEx is a simple yet powerful library that provides extension methods for creating a fluent, pipe-like syntax in C#.  It allows you to chain function calls together in a readable and expressive way, improving code clarity and maintainability.
 
 ## What is it?
 
@@ -18,11 +18,15 @@ The core of PipeEx is the `I` extension method.
 public int Calc(int x) => x.I(FuncY)
                            .I(x => x + 2);
 
-// you do not have to await manually
+// await is handled automatically
 public Task<int> Calc(int x) => x.I(FuncAsync)
                                  .I(x => x + 2)
                                  .I(FuncYAsync)
                                  .I(Func);
+
+// automatically destructuring of tules
+public Task<int> Calc(int x) => x.I(x => x + 2, x => x + 4)
+                                 .I((x, y) => x y);
 ```
 
 ## Features
