@@ -1,9 +1,8 @@
-using PipeEx;
 using static BunsenBurner.ArrangeActAssert;
 
 namespace PipeEx.Tests;
 
-public class UnitTest1
+public class UnitTest
 {
     [Fact]
     public Task Test1() => Arrange(() => 1)
@@ -18,7 +17,7 @@ public class UnitTest1
     [Fact]
     public Task Test3() => Arrange(() => 1)
         .Act(x => x.I(y => Task.FromResult(y))
-            .I(y => y + 2))
+                   .I(y => y + 2))
         .Assert(r => Assert.Equal(3, r));
 
     [Fact]
