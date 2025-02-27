@@ -19,14 +19,19 @@ public int Calc(int x) => x.I(FuncY)
                            .I(x => x + 2);
 
 // await is handled automatically
-public Task<int> Calc(int x) => x.I(FuncAsync)
+public Task<int> Calc(int x) => x.I(FuncXAsync)
                                  .I(x => x + 2)
                                  .I(FuncYAsync)
-                                 .I(Func);
+                                 .I(FuncY);
 
 // automatically destructuring of tules
-public Task<int> Calc(int x) => x.I(x => x + 2, x => x + 4)
-                                 .I((x, y) => x y);
+public int Calc(int x) => x.I(x => (x + 2, x + 4))
+                           .I((x, y) => x + y);
+
+// StructuredConcurrency
+public Task<int> Calc(int x) => x.I(FuncXAsync, 
+                                    () => FuncYAsync.I(FuncY))
+                                 .I((x, y) => x + y);
 ```
 
 ## Features
