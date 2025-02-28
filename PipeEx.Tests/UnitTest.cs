@@ -18,7 +18,8 @@ public class UnitTest
     [Fact]
     public Task Test3() => Arrange(() => 1)
         .Act(x => x.I(y => Task.FromResult(y))
-                   .I(y => y + 2))
+                   .I(y => y + 2)
+                   .I(y => Task.FromResult<int>(y)))
         .Assert(r => Assert.Equal(3, r));
 
     [Fact]
