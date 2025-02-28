@@ -1,5 +1,6 @@
 #!/bin/bash
 fileName="TupleDestructuring.g.cs"
+echo "Started generating $fileName"
 cat << EOF > $fileName
 namespace PipeEx;
 
@@ -14,10 +15,9 @@ for item in $(seq 1 12); do
         ty="${ty}, TSource$((i + 1))"
         tv="${tv}, source.Item$((i + 1))"
     done
-
-    echo "Current item: $item, Types: $ty"
-
+    
 cat << EOF >> $fileName
+
     public static TResult I<$ty, TResult>(this ($ty) source, Func<$ty, TResult> func)
     {
         return func($tv);
@@ -28,3 +28,4 @@ done
 cat << EOF >> $fileName
 }
 EOF
+echo "Successfully generated $fileName"

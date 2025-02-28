@@ -1,5 +1,6 @@
 #!/bin/bash
 fileName="StructuredConcurrency.TupleDestructuring.g.cs"
+echo "Started generating $fileName"
 cat << EOF > $fileName
 namespace PipeEx.StructuredConcurrency;
 
@@ -15,9 +16,8 @@ for item in $(seq 1 12); do
         tv="${tv}, source.Item$((i + 1))"
     done
 
-    echo "Current item: $item, Types: $ty"
-
 cat << EOF >> $fileName
+
     public static async Task<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, Task<TResult>> func)
     {
         return await func($tv);
@@ -40,3 +40,4 @@ done
 cat << EOF >> $fileName
 }
 EOF
+echo "Successfully generated $fileName"
