@@ -14,21 +14,25 @@ PipeEx introduces the `I` (Infer) extension method, which acts as a "pipe" opera
 
 The core of PipeEx is the `I` extension method.
 ```cs
-
 public int Calc(int x) => x.I(FuncY)
                            .I(x => x + 2);
 
+// automatically destructuring of tules
+public int Calc(int x) => x.I(x => (x + 2, x + 4))
+                           .I((x, y) => x + y);
+```
+
+For Structured Concurrency use:
+[![NuGet](https://img.shields.io/nuget/dt/PipeEx.StructuredConcurrency.svg)](https://www.nuget.org/packages/PipeEx.StructuredConcurrency) 
+[![NuGet](https://img.shields.io/nuget/vpre/PipeEx.StructuredConcurrency.svg)](https://www.nuget.org/packages/PipeEx.StructuredConcurrency)
+```cs
+// StructuredConcurrency
 // await is handled automatically
 public Task<int> Calc(int x) => x.I(FuncXAsync)
                                  .I(x => x + 2)
                                  .I(FuncYAsync)
                                  .I(FuncY);
 
-// automatically destructuring of tules
-public int Calc(int x) => x.I(x => (x + 2, x + 4))
-                           .I((x, y) => x + y);
-
-// StructuredConcurrency
 public Task<int> Calc(int x) => x.I(FuncXAsync, 
                                     () => FuncYAsync.I(FuncY))
                                  .I((x, y) => x + y);

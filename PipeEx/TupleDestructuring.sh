@@ -1,5 +1,6 @@
 #!/bin/bash
-cat << EOF > TupleDestructuring.cs
+fileName="TupleDestructuring.g.cs"
+cat << EOF > $fileName
 namespace PipeEx;
 
 public static class TupleDestructuring
@@ -16,31 +17,14 @@ for item in $(seq 1 12); do
 
     echo "Current item: $item, Types: $ty"
 
-cat << EOF >> TupleDestructuring.cs
+cat << EOF >> $fileName
     public static TResult I<$ty, TResult>(this ($ty) source, Func<$ty, TResult> func)
     {
         return func($tv);
     }
-
-    public static async Task<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, Task<TResult>> func)
-    {
-        return await func($tv);
-    }
-
-    public static async Task<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
-    {
-        var source = await s;
-        return func($tv);
-    }
-
-    public static async Task<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, Task<TResult>> func)
-    {
-        var source = await s;
-        return await func($tv);
-    }
 EOF
 
 done
-cat << EOF >> TupleDestructuring.cs
+cat << EOF >> $fileName
 }
 EOF
