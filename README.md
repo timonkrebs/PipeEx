@@ -26,15 +26,14 @@ For Structured Concurrency use:
 [![NuGet](https://img.shields.io/nuget/dt/PipeEx.StructuredConcurrency.svg)](https://www.nuget.org/packages/PipeEx.StructuredConcurrency) 
 [![NuGet](https://img.shields.io/nuget/vpre/PipeEx.StructuredConcurrency.svg)](https://www.nuget.org/packages/PipeEx.StructuredConcurrency)
 ```cs
-// StructuredConcurrency
 // await is handled automatically
 public Task<int> Calc(int x) => x.I(FuncXAsync)
                                  .I(x => x + 2)
                                  .I(FuncYAsync)
                                  .I(FuncY);
 
-public Task<int> Calc(int x) => x.I(FuncXAsync, 
-                                    () => FuncYAsync.I(FuncY))
+// Branching/TaskGroups
+public Task<int> Calc(int x) => x.I((FuncXAsync, FuncYAsync().I(FuncY).I))
                                  .I((x, y) => x + y);
 ```
 
@@ -43,6 +42,10 @@ public Task<int> Calc(int x) => x.I(FuncXAsync,
 - **Asynchronous Support**: Works seamlessly with both synchronous and asynchronous operations (Task<T>).
 - **Simplified Code**: Reduces nesting and improves code maintainability.
 - **Lightweight**: A small and focused library with minimal dependencies.
+- **Cancelation**: Handles initialization and propagation of cancellation token. (StructuredTask<T>)
+
+Planned:
+- **Ressources**: Handles 
   
 ## Contributing
 Contributions are welcome!  Feel free to submit pull requests or open issues.

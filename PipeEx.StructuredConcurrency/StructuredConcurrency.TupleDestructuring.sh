@@ -1,5 +1,5 @@
 #!/bin/bash
-fileName="StructuredConcurrency.TupleDestructuring.g.cs"
+fileName="PipeEx.StructuredConcurrency/StructuredConcurrency.TupleDestructuring.g.cs"
 echo "Started generating $fileName"
 cat << EOF > $fileName
 namespace PipeEx.StructuredConcurrency;
@@ -18,18 +18,47 @@ for item in $(seq 1 12); do
 
 cat << EOF >> $fileName
 
-    public static async Task<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, Task<TResult>> func)
+    public static async StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, Task<TResult>> func)
     {
         return await func($tv);
     }
 
-    public static async Task<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
+    public static async StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, StructuredTask<TResult>> func)
+    {
+        return await func($tv);
+    }
+
+    public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
     {
         var source = await s;
         return func($tv);
     }
 
-    public static async Task<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, Task<TResult>> func)
+    public static async StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, TResult> func)
+    {
+        var source = await s;
+        return func($tv);
+    }
+
+    public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, Task<TResult>> func)
+    {
+        var source = await s;
+        return await func($tv);
+    }
+
+    public static async StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, Task<TResult>> func)
+    {
+        var source = await s;
+        return await func($tv);
+    }
+
+    public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
+    {
+        var source = await s;
+        return await func($tv);
+    }
+
+    public static async StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
     {
         var source = await s;
         return await func($tv);
