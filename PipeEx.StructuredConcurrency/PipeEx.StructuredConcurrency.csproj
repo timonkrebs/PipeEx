@@ -27,8 +27,6 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
 
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="./StructuredConcurrency.TupleDestructuring.sh" />
-  </Target>
+
 
 </Project>
