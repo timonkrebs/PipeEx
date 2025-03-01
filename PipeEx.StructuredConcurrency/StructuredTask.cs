@@ -8,16 +8,16 @@ public class StructuredTask<T>
     private Task<T> task;
     public CancellationTokenSource CancellationTokenSource { get; }
 
+    public StructuredTask(Task<T> task, CancellationToken cancellationToken)
+    {
+        Task = task;
+        CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    }
+    
     internal StructuredTask(Task<T> task)
     {
         Task = task;
         CancellationTokenSource = new CancellationTokenSource();
-    }
-
-    internal StructuredTask(Task<T> task, CancellationToken cancellationToken)
-    {
-        Task = task;
-        CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
     }
 
     internal StructuredTask(Task<T> task, CancellationTokenSource cancellationTokenSource)
