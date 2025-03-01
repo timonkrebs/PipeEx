@@ -27,7 +27,7 @@ public static class Branching
 
     public static StructuredTask<(TResult, TResult2)> I<TSource, TResult, TResult2>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func, Func<TSource, TResult2> func2)
     {
-        var impl = async (StructuredTask<TSource> source, Func<TSource, Task<TResult>> func, Func<TSource, TResult2> func2) =>
+        var impl = async () =>
             {
                 var s = await source;
                 var t1 = func(s);
@@ -35,7 +35,7 @@ public static class Branching
                 return (await t1, t2);
             };
 
-        return new StructuredTask<(TResult, TResult2)>(impl(source, func, func2), source.CancellationTokenSource);
+        return new StructuredTask<(TResult, TResult2)>(impl(), source.CancellationTokenSource);
     }
 
     public static async StructuredTask<(TResult, TResult2)> I<TSource, TResult, TResult2>(this Task<TSource> source, Func<TSource, Task<TResult>> func, Func<TSource, Task<TResult2>> func2)
@@ -49,7 +49,7 @@ public static class Branching
 
     public static StructuredTask<(TResult, TResult2)> I<TSource, TResult, TResult2>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func, Func<TSource, Task<TResult2>> func2)
     {
-        var impl = async (StructuredTask<TSource> source, Func<TSource, Task<TResult>> func, Func<TSource, Task<TResult2>> func2) =>
+        var impl = async () =>
             {
                 var s = await source;
                 var t1 = func(s);
@@ -58,7 +58,7 @@ public static class Branching
                 return (t1.Result, t2.Result);
             };
 
-        return new StructuredTask<(TResult, TResult2)>(impl(source, func, func2), source.CancellationTokenSource);
+        return new StructuredTask<(TResult, TResult2)>(impl(), source.CancellationTokenSource);
     }
 
     public static async StructuredTask<(TResult, TResult2)> I<TSource, TSource2, TResult, TResult2>(this (TSource, TSource2) source, Func<TSource, TSource2, Task<TResult>> func, Func<TSource, TSource2, TResult2> func2)
@@ -86,7 +86,7 @@ public static class Branching
 
     public static StructuredTask<(TResult, TResult2)> I<TSource, TSource2, TResult, TResult2>(this StructuredTask<(TSource, TSource2)> source, Func<TSource, TSource2, Task<TResult>> func, Func<TSource, TSource2, TResult2> func2)
     {
-        var impl = async (StructuredTask<(TSource, TSource2)> source, Func<TSource, TSource2, Task<TResult>> func, Func<TSource, TSource2, TResult2> func2) =>
+        var impl = async () =>
             {
                 var s = await source;
                 var t1 = func(s.Item1, s.Item2);
@@ -94,7 +94,7 @@ public static class Branching
                 return (await t1, t2);
             };
 
-        return new StructuredTask<(TResult, TResult2)>(impl(source, func, func2), source.CancellationTokenSource);
+        return new StructuredTask<(TResult, TResult2)>(impl(), source.CancellationTokenSource);
     }
 
     public static async StructuredTask<(TResult, TResult2)> I<TSource, TSource2, TResult, TResult2>(this Task<(TSource, TSource2)> source, Func<TSource, TSource2, Task<TResult>> func, Func<TSource, TSource2, Task<TResult2>> func2)
@@ -108,7 +108,9 @@ public static class Branching
 
     public static StructuredTask<(TResult, TResult2)> I<TSource, TSource2, TResult, TResult2>(this StructuredTask<(TSource, TSource2)> source, Func<TSource, TSource2, Task<TResult>> func, Func<TSource, TSource2, Task<TResult2>> func2)
     {
-        var impl = async (StructuredTask<(TSource, TSource2)> source, Func<TSource, TSource2, Task<TResult>> func, Func<TSource, TSource2, Task<TResult2>> func2) =>
+        // We must take care of the case when Func<TSource, TSource2, StructuredTask<TResult>>
+        // In this case we would like to provide the source.CancellationTokenSource to the funcs
+        var impl = async () =>
             {
                 var s = await source;
                 var t1 = func(s.Item1, s.Item2);
@@ -117,6 +119,6 @@ public static class Branching
                 return (t1.Result, t2.Result);
             };
 
-        return new StructuredTask<(TResult, TResult2)>(impl(source, func, func2), source.CancellationTokenSource);
+        return new StructuredTask<(TResult, TResult2)>(impl(), source.CancellationTokenSource);
     }
 }
