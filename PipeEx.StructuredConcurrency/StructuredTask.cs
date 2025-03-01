@@ -5,7 +5,7 @@ namespace PipeEx.StructuredConcurrency;
 [AsyncMethodBuilder(typeof(PoolingAsyncStructuredTaskMethodBuilder<>))]
 public class StructuredTask<T>
 {
-    public Task<T> Task { get; }
+    private Task<T> task;
     public CancellationTokenSource CancellationTokenSource { get; }
 
     internal StructuredTask(Task<T> task)
