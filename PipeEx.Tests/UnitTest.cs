@@ -20,10 +20,6 @@ public class UnitTest
         .Act(Chain)
         .Assert(r => Assert.Equal(3, r));
 
-    private Task<int> Chain(int i) => i.I(y => Task.FromResult(y))
-                   .I(y => y + 2)
-                   .I(Task.FromResult<int>);
-
     [Fact]
     public Task Test4_TupleDestructuring() => Arrange(() => (1, 2))
         .Act(x => x.I((a, b) => a + b))
@@ -74,7 +70,11 @@ public class UnitTest
                              .I((x, y) => x + y)
                              .I(FuncY);
 
-    private Func<int, Task<int>> FuncXAsync = async x => await Task.FromResult(x);
-    private Func<int, Task<int>> FuncYAsync = x => Task.FromResult(x);
+    private async Task<int> FuncXAsync (int x) => await Task.FromResult(x);
+    private Task<int> FuncYAsync(int x) => Task.FromResult(x);
     private int FuncY(int x) => x + 1;
+
+    private Task<int> Chain(int i) => i.I(y => Task.FromResult(y))
+                   .I(y => y + 2)
+                   .I(Task.FromResult<int>);
 }

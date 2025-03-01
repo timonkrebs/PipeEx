@@ -19,7 +19,13 @@ public static class TupleDestructuring
         return func(source.Item1, source.Item2);
     }
 
-    public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this StructuredTask<(TSource1, TSource2)> s, Func<TSource1, TSource2, TResult> func)
+    public static StructuredTask<TResult> I<TSource1, TSource2, TResult>(this StructuredTask<(TSource1, TSource2)> s, Func<TSource1, TSource2, TResult> func)
+    {
+        var t = Impl(s, func);
+        return new StructuredTask<TResult>(t, s.CancellationTokenSource);
+    }
+
+    public static async Task<TResult> Impl<TSource1, TSource2, TResult>(StructuredTask<(TSource1, TSource2)> s, Func<TSource1, TSource2, TResult> func)
     {
         var source = await s;
         return func(source.Item1, source.Item2);
