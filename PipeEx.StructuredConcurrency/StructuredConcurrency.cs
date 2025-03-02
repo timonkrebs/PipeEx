@@ -62,7 +62,7 @@ public static class StructuredConcurrency
 
                 try
                 {
-                    structuredTask = func(await source);
+                    structuredTask = func(source.Result);
                     structuredTask.CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
                         [structuredTask.CancellationTokenSource.Token, source.CancellationTokenSource.Token]);
                     return await structuredTask;
