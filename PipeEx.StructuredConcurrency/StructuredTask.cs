@@ -32,6 +32,8 @@ public class StructuredTask<T>
         CancellationTokenSource = task.CancellationTokenSource;
     }
 
+    internal T Result => task.Result;
+
     public TaskAwaiter<T> GetAwaiter() => task.GetAwaiter();
 
     public static implicit operator Task<T>(StructuredTask<T> structuredTask)
