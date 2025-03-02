@@ -35,22 +35,45 @@ public static class StructuredConcurrency
         return await func(await source);
     }
 
-    public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
-    {
-        // ToDo: This is problematic because i only get the structuredTask after i awaited the source
-        // That is to late for new StructuredTask<TResult>(impl(), structuredTask!.CancellationTokenSource)
-        StructuredTask<TResult> structuredTask = default!;
-        var impl = async () => {
-            structuredTask = func(await source);
-            return await structuredTask;
-        };
-
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
-    }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func)
     {
         var impl = async () => await func(await source);
         return new StructuredTask<TResult>(impl(), source.CancellationTokenSource);
+    }
+
+    public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
+    {
+        // ToDo: Func that return StructuredTask must be handeled everywhere
+        StructuredTask<TResult> structuredTask = default!;
+        // This works because the structuredTask is assigned befor the await is hit.
+        var impl = async () => 
+            {
+                try
+                {
+                    await source;
+                }
+                catch(TaskCanceledException)
+                {
+ 
+                    await structuredTask.CancellationTokenSource.CancelAsync();
+                    throw;
+                }
+
+                try
+                {
+                    structuredTask = func(await source);
+                    structuredTask.CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                        [structuredTask.CancellationTokenSource.Token, source.CancellationTokenSource.Token]);
+                    return await structuredTask;
+                }
+                catch(TaskCanceledException)
+                {
+                    await source.CancellationTokenSource.CancelAsync();
+                    throw;
+                }
+            };
+
+        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
     }
 }

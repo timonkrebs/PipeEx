@@ -108,8 +108,6 @@ public static class Branching
 
     public static StructuredTask<(TResult, TResult2)> I<TSource, TSource2, TResult, TResult2>(this StructuredTask<(TSource, TSource2)> source, Func<TSource, TSource2, Task<TResult>> func, Func<TSource, TSource2, Task<TResult2>> func2)
     {
-        // We must take care of the case when Func<TSource, TSource2, StructuredTask<TResult>>
-        // In this case we would like to provide the source.CancellationTokenSource to the funcs
         var impl = async () =>
             {
                 var s = await source;

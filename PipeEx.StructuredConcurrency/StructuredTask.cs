@@ -6,7 +6,7 @@ namespace PipeEx.StructuredConcurrency;
 public class StructuredTask<T>
 {
     private readonly Task<T> task;
-    public CancellationTokenSource CancellationTokenSource { get; }
+    public CancellationTokenSource CancellationTokenSource { get; internal set; }
 
     public StructuredTask(Task<T> task, CancellationToken cancellationToken)
     {
