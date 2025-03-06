@@ -8,9 +8,17 @@ public static class TupleDestructuring
         return await func(source.Item1, source.Item2);
     }
 
-    public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this (TSource1, TSource2) source, Func<TSource1, TSource2, StructuredTask<TResult>> func)
+    public static StructuredTask<TResult> I<TSource1, TSource2, TResult>(this (TSource1, TSource2) source, Func<TSource1, TSource2, StructuredTask<TResult>> func)
     {
-        return await func(source.Item1, source.Item2);
+        // This works because the structuredTask is assigned befor the await is hit.
+        StructuredTask<TResult> structuredTask = default!;
+        var impl = async () =>
+        {
+            structuredTask = func(source.Item1, source.Item2);
+            return await structuredTask;
+        };
+
+        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this Task<(TSource1, TSource2)> s, Func<TSource1, TSource2, TResult> func)
@@ -21,14 +29,13 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TResult>(this StructuredTask<(TSource1, TSource2)> s, Func<TSource1, TSource2, TResult> func)
     {
-        var t = Impl(s, func);
-        return new StructuredTask<TResult>(t, s.CancellationTokenSource);
-    }
+        var impl = async () =>
+        {
+            var source = await s;
+            return func(source.Item1, source.Item2);
+        };
 
-    public static async Task<TResult> Impl<TSource1, TSource2, TResult>(StructuredTask<(TSource1, TSource2)> s, Func<TSource1, TSource2, TResult> func)
-    {
-        var source = await s;
-        return func(source.Item1, source.Item2);
+        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this Task<(TSource1, TSource2)> s, Func<TSource1, TSource2, Task<TResult>> func)
