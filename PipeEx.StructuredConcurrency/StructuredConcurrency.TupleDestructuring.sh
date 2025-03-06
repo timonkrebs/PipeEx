@@ -70,18 +70,114 @@ cat << EOF >> $fileName
         return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
     }
 
-     public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
+     public static StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
     {
-        // ToDo: Func that return StructuredTask must be handeled everywhere
-        var source = await s;
-        return await func($tv);
+        var cts = new CancellationTokenSource();
+        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var impl = async () =>
+        {
+            try
+            {
+                ($ty) source;
+                try
+                {
+                    source = await s;
+                }
+                catch (OperationCanceledException)
+                {
+                    // If *source* was cancelled, cancel *our* task.
+                    cts.Cancel(); // Ensure consistent cancellation.
+                    tcs.SetCanceled(cts.Token); // Or SetCanceled() if you don't need the token
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                    return;
+                }
+
+                var innerStructuredTask = func($tv);
+
+                try
+                {
+                    using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
+                    var result = await innerStructuredTask;
+                    tcs.SetResult(result);
+                }
+                catch (OperationCanceledException)
+                {
+                    tcs.SetCanceled(innerStructuredTask.CancellationTokenSource.Token);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Catch-all: This should rarely happen, but protects against unexpected errors in the setup.
+                tcs.TrySetException(ex);  // Use TrySetException, as the task might already be completed.
+            }
+        };
+        impl();
+
+        return new StructuredTask<TResult>(tcs.Task, cts);
     }
 
-    public static async StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
+    public static StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
     {
-        // ToDo: Func that return StructuredTask must be handeled everywhere
-        var source = await s;
-        return await func($tv);
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(s.CancellationTokenSource.Token);
+        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var impl = async () =>
+        {
+            try
+            {
+                ($ty) source;
+                try
+                {
+                    source = await s;
+                }
+                catch (OperationCanceledException)
+                {
+                    // If *source* was cancelled, cancel *our* task.
+                    cts.Cancel(); // Ensure consistent cancellation.
+                    tcs.SetCanceled(cts.Token); // Or SetCanceled() if you don't need the token
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                    return;
+                }
+
+                var innerStructuredTask = func($tv);
+
+                try
+                {
+                    using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
+                    var result = await innerStructuredTask;
+                    tcs.SetResult(result);
+                }
+                catch (OperationCanceledException)
+                {
+                    tcs.SetCanceled(innerStructuredTask.CancellationTokenSource.Token);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Catch-all: This should rarely happen, but protects against unexpected errors in the setup.
+                tcs.TrySetException(ex);  // Use TrySetException, as the task might already be completed.
+            }
+        };
+        impl();
+
+        return new StructuredTask<TResult>(tcs.Task, cts);
     }
 EOF
 
