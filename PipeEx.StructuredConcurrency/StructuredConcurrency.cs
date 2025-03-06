@@ -35,6 +35,18 @@ public static class StructuredConcurrency
         return await func(await source);
     }
 
+    public static StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, StructuredTask<TResult>> func)
+    {
+        // ToDo: Func that return StructuredTask must be handeled everywhere
+        StructuredTask<TResult> structuredTask = default!;
+        // ToDo: This works does not work because the structuredTask is not assigned befor the await is hit.
+        var impl = async () => {
+            structuredTask = func(await source);
+            return await structuredTask;
+        };
+
+        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+    }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func)
     {
@@ -46,7 +58,7 @@ public static class StructuredConcurrency
     {
         // ToDo: Func that return StructuredTask must be handeled everywhere
         StructuredTask<TResult> structuredTask = default!;
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works does not work because the structuredTask is not assigned befor the await is hit.
         var impl = async () => 
             {
                 try
