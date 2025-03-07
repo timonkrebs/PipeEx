@@ -3,14 +3,21 @@ using System.Runtime.CompilerServices;
 namespace PipeEx.StructuredConcurrency;
 
 [AsyncMethodBuilder(typeof(PoolingAsyncStructuredTaskMethodBuilder<>))]
-public class StructuredTask<T>
+public class StructuredTask<T> : IDisposable
 {
+    private Boolean mustHandleDisposing = false;
     public CancellationTokenSource CancellationTokenSource { get; internal set; }
 
     public StructuredTask(Task<T> task, CancellationToken cancellationToken)
-    : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) { }
+    : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) 
+    {
+        mustHandleDisposing = true;
+    }
 
-    internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource()) { }
+    internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource())
+    {
+        mustHandleDisposing = true;
+    }
 
     internal StructuredTask(StructuredTask<T> task) : this(task.Task, task.CancellationTokenSource) { }
 
@@ -23,6 +30,11 @@ public class StructuredTask<T>
     internal Task<T> Task { get; }
 
     public TaskAwaiter<T> GetAwaiter() => Task.GetAwaiter();
+
+    public void Dispose()
+    {
+        if(mustHandleDisposing) CancellationTokenSource.Dispose();
+    }        
 
     public static implicit operator Task<T>(StructuredTask<T> structuredTask)
     {

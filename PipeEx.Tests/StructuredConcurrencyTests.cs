@@ -16,12 +16,12 @@ public class StructuredConcurrencyTests
             Assert.Equal("Inner failed", ex.Message);
         });
 
-    [Fact(Skip = "This test is temporarily disabled because Disposal of cancelation token is still in reaserch phase.")]
+    [Fact]
     public Task Test2_Ensure_Cancellation_Registration_Is_Disposed() =>
         Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
         .Act(x =>
         {
-            var structuredTask = x.Task.I(val => Task.FromResult(val * 2));
+            using var structuredTask = x.Task.I(val => Task.FromResult(val * 2));
             // We don't cancel
             x.SetResult(5);  // Complete the source task to cause disposal.
             return structuredTask;
