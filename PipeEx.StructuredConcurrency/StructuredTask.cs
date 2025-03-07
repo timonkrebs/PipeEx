@@ -13,23 +13,15 @@ public class StructuredTask<T>
         this.task = task;
         CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
     }
-    
-    internal StructuredTask(Task<T> task)
-    {
-        this.task = task;
-        CancellationTokenSource = new CancellationTokenSource();
-    }
+
+    internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource()) { }
+
+    internal StructuredTask(StructuredTask<T> task) : this(task.task, task.CancellationTokenSource) { }
 
     internal StructuredTask(Task<T> task, CancellationTokenSource cancellationTokenSource)
     {
         this.task = task;
         CancellationTokenSource = cancellationTokenSource;
-    }
-
-    internal StructuredTask(StructuredTask<T> task)
-    {
-        this.task = task.task;
-        CancellationTokenSource = task.CancellationTokenSource;
     }
 
     internal T Result => task.Result;

@@ -27,7 +27,15 @@ public static class StructuredConcurrency
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, TResult> func)
     {
-        var impl = async () => func(await source);
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var impl = async () => {
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var f = func(s);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return f;
+        };
         return new StructuredTask<TResult>(impl(), source.CancellationTokenSource);
     }
 
@@ -93,12 +101,21 @@ public static class StructuredConcurrency
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func)
     {
-        var impl = async () => await func(await source);
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var impl = async () => {
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var f = await func(s);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return f;
+        };
         return new StructuredTask<TResult>(impl(), source.CancellationTokenSource);
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
     {
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var cts = CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token);
         var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -110,6 +127,7 @@ public static class StructuredConcurrency
                 try
                 {
                     sourceResult = await source;
+                    source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 }
                 catch (OperationCanceledException)
                 {
@@ -125,11 +143,12 @@ public static class StructuredConcurrency
                 }
 
                 var innerStructuredTask = func(sourceResult);
-
+                source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
                     var result = await innerStructuredTask;
+                    source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -148,7 +167,6 @@ public static class StructuredConcurrency
             }
         };
         impl();
-
         return new StructuredTask<TResult>(tcs.Task, cts);
     }
 }
