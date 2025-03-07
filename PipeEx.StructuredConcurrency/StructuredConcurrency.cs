@@ -28,7 +28,8 @@ public static class StructuredConcurrency
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, TResult> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        var impl = async () => {
+        var impl = async () =>
+        {
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var s = await source;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -53,45 +54,23 @@ public static class StructuredConcurrency
         {
             try
             {
-                TSource sourceResult;
-                try
+                if (source.IsCanceled)
                 {
-                    sourceResult = await source;
-                }
-                catch (OperationCanceledException)
-                {
-                    // If *source* was cancelled, cancel *our* task.
                     cts.Cancel(); // Ensure consistent cancellation.
-                    tcs.SetCanceled(cts.Token); // Or SetCanceled() if you don't need the token
+                    tcs.SetException(new OperationCanceledException());
                     return;
                 }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
-                    return;
-                }
+                var innerStructuredTask = func(await source);
 
-                var innerStructuredTask = func(sourceResult);
+                using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
+                var result = await innerStructuredTask;
 
-                try
-                {
-                    using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
-                    tcs.SetResult(result);
-                }
-                catch (OperationCanceledException)
-                {
-                    tcs.SetCanceled(innerStructuredTask.CancellationTokenSource.Token);
-                }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
-                }
+                tcs.SetResult(result);
             }
             catch (Exception ex)
             {
-                // Catch-all: This should rarely happen, but protects against unexpected errors in the setup.
-                tcs.TrySetException(ex);  // Use TrySetException, as the task might already be completed.
+                cts.Cancel(); // Ensure consistent cancellation.
+                tcs.SetException(ex);
             }
         };
         impl();
@@ -102,7 +81,8 @@ public static class StructuredConcurrency
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        var impl = async () => {
+        var impl = async () =>
+        {
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var s = await source;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -115,55 +95,31 @@ public static class StructuredConcurrency
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
     {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var cts = CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token);
         var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var impl = async () =>
         {
+
             try
             {
-                TSource sourceResult;
-                try
+                if (source.Task.IsCanceled)
                 {
-                    sourceResult = await source;
-                    source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                }
-                catch (OperationCanceledException)
-                {
-                    // If *source* was cancelled, cancel *our* task.
                     cts.Cancel(); // Ensure consistent cancellation.
-                    tcs.SetCanceled(cts.Token); // Or SetCanceled() if you don't need the token
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
+                    tcs.SetException(new OperationCanceledException());
                     return;
                 }
 
-                var innerStructuredTask = func(sourceResult);
-                source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                try
-                {
-                    using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
-                    source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    tcs.SetResult(result);
-                }
-                catch (OperationCanceledException)
-                {
-                    tcs.SetCanceled(innerStructuredTask.CancellationTokenSource.Token);
-                }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
-                }
+                var innerStructuredTask = func(await source);
+                using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
+                var result = await innerStructuredTask;
+
+                tcs.SetResult(result);
             }
             catch (Exception ex)
             {
-                // Catch-all: This should rarely happen, but protects against unexpected errors in the setup.
-                tcs.TrySetException(ex);  // Use TrySetException, as the task might already be completed.
+                cts.Cancel(); // Ensure consistent cancellation.
+                tcs.SetException(ex);
             }
         };
         impl();

@@ -5,32 +5,28 @@ namespace PipeEx.StructuredConcurrency;
 [AsyncMethodBuilder(typeof(PoolingAsyncStructuredTaskMethodBuilder<>))]
 public class StructuredTask<T>
 {
-    private readonly Task<T> task;
     public CancellationTokenSource CancellationTokenSource { get; internal set; }
 
     public StructuredTask(Task<T> task, CancellationToken cancellationToken)
-    {
-        this.task = task;
-        CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-    }
+    : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) { }
 
     internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource()) { }
 
-    internal StructuredTask(StructuredTask<T> task) : this(task.task, task.CancellationTokenSource) { }
+    internal StructuredTask(StructuredTask<T> task) : this(task.Task, task.CancellationTokenSource) { }
 
     internal StructuredTask(Task<T> task, CancellationTokenSource cancellationTokenSource)
     {
-        this.task = task;
+        Task = task;
         CancellationTokenSource = cancellationTokenSource;
     }
 
-    internal T Result => task.Result;
+    internal Task<T> Task { get; }
 
-    public TaskAwaiter<T> GetAwaiter() => task.GetAwaiter();
+    public TaskAwaiter<T> GetAwaiter() => Task.GetAwaiter();
 
     public static implicit operator Task<T>(StructuredTask<T> structuredTask)
     {
-        return structuredTask.task;
+        return structuredTask.Task;
     }
 }
 
