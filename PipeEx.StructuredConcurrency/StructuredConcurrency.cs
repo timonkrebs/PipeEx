@@ -16,8 +16,9 @@ public static class StructuredConcurrency
             structuredTask = func(source);
             return await structuredTask;
         };
-
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        
+        impl();
+        return structuredTask;
     }
 
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, TResult> func)
