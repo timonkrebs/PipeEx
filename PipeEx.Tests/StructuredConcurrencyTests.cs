@@ -89,7 +89,7 @@ public class StructuredConcurrencyTests
         Arrange(() => 1)
         .Act(x =>
         {
-            var structuredTask = x.I(val => Task.FromResult(val * 2))
+            var structuredTask = x.I<int, int>(val => Task.FromResult(val * 2))
             .I(async x =>
             {
                 await Task.Delay(10);
