@@ -56,7 +56,7 @@ public class ConditionalExecutionResult<TSource>
     public ConditionalExecutionResult(TSource value, bool skip = false)
     {
         Value = value;
-        Skip = skipp;
+        Skip = skip;
     }
 
     public TSource Value { get; }
