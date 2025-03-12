@@ -4,7 +4,7 @@ namespace PipeEx.StructuredConcurrency;
 
 public static class StructuredConcurrency
 {
-    [OverloadResolutionPriority(-1)]
+    [OverloadResolutionPriority(1)]
     public static async StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, Task<TResult>> func)
     {
         return await func(source);
