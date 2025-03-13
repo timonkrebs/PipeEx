@@ -61,9 +61,4 @@ public class ConditionalExecutionResult<TSource>
 
     public TSource Value { get; }
     public bool Skip { get; }
-
-    public static implicit operator TSource(ConditionalExecutionResult<TSource> conditionalExecutionResult)
-    {
-        return conditionalExecutionResult.Value;
-    }
 }
