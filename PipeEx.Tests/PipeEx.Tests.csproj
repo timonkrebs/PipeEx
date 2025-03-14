@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PipeEx\PipeEx.csproj" />
     <ProjectReference Include="..\PipeEx.StructuredConcurrency\PipeEx.StructuredConcurrency.csproj" />
+    <ProjectReference Include="..\PipeEx.ConditionalExpressions\PipeEx.ConditionalExpressions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
