@@ -5,26 +5,21 @@ namespace PipeEx.StructuredConcurrency;
 [AsyncMethodBuilder(typeof(PoolingAsyncStructuredTaskMethodBuilder<>))]
 public class StructuredTask<T> : IDisposable
 {
-    private Boolean mustHandleDisposing = false;
+    private bool mustHandleDisposing = false;
     public CancellationTokenSource CancellationTokenSource { get; internal set; }
 
     public StructuredTask(Task<T> task, CancellationToken cancellationToken)
-    : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) 
-    {
-        mustHandleDisposing = true;
-    }
+    : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken), false) { }
 
-    internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource())
-    {
-        mustHandleDisposing = true;
-    }
+    internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource()) { }
 
     internal StructuredTask(StructuredTask<T> task) : this(task.Task, task.CancellationTokenSource) { }
 
-    internal StructuredTask(Task<T> task, CancellationTokenSource cancellationTokenSource)
+    internal StructuredTask(Task<T> task, CancellationTokenSource cancellationTokenSource, bool mustHandleDisposing = true)
     {
         Task = task;
         CancellationTokenSource = cancellationTokenSource;
+        this.mustHandleDisposing = mustHandleDisposing;
     }
 
     internal Task<T> Task { get; }
@@ -34,7 +29,7 @@ public class StructuredTask<T> : IDisposable
     public void Dispose()
     {
         if(mustHandleDisposing) CancellationTokenSource.Dispose();
-    }        
+    }   
 
     public static implicit operator Task<T>(StructuredTask<T> structuredTask)
     {

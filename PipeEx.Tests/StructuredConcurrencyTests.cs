@@ -21,39 +21,52 @@ public class StructuredConcurrencyTests
         Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
         .Act(x =>
         {
-            using var structuredTask = x.Task.I(val => Task.FromResult(val * 2));
+            var structuredTask = x.Task.I(val => Task.FromResult(val * 2));
             // We don't cancel
             x.SetResult(5);  // Complete the source task to cause disposal.
             return structuredTask;
         })
         .Assert(async structuredTask =>
         {
-            await structuredTask;
-            await Task.Yield();
+            using (var s = structuredTask)
+            {
+                await structuredTask;
+            }
 
             // Check if the CancellationToken is disposed, it throws an exception when used after disposal
             Assert.Throws<ObjectDisposedException>(() => structuredTask.CancellationTokenSource.Token.ThrowIfCancellationRequested());
         });
 
     [Fact]
-    public Task Test3_Ensure_Cancellation() =>
-        Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
-        .Act(x =>
-        {
-            var structuredTask = x.Task.I(val => Task.FromResult(val * 2));
-
-            x.SetCanceled();
-            return structuredTask;
-        })
-        .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
-
-    [Fact]
-    public Task Test4_Ensure_Cancellation_Chaining_MultipleStages() =>
+    public Task Test3_Ensure_Cancellation_Registration_Is_Disposed() =>
         Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
         .Act(x =>
         {
             var structuredTask = x.Task.I(val => Task.FromResult(val * 2))
-                                    .I(val => val * 2);
+                .I(val => Task.FromResult(val * 2))
+                .I(val => Task.FromResult(val * 2));
+
+            // We don't cancel
+            x.SetResult(5);  // Complete the source task to cause disposal.
+            return structuredTask;
+        })
+        .Assert(async structuredTask =>
+        {
+            using (var s = structuredTask)
+            {
+                await structuredTask;
+            }
+
+            // Check if the CancellationToken is disposed, it throws an exception when used after disposal
+            Assert.Throws<ObjectDisposedException>(() => structuredTask.CancellationTokenSource.Token.ThrowIfCancellationRequested());
+        });
+
+    [Fact]
+    public Task Test4_Ensure_Cancellation() =>
+        Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
+        .Act(x =>
+        {
+            var structuredTask = x.Task.I(val => Task.FromResult(val * 2));
 
             x.SetCanceled();
             return structuredTask;
@@ -65,10 +78,11 @@ public class StructuredConcurrencyTests
         Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
         .Act(x =>
         {
-            var structuredTask = x.Task.I(val => Task.FromResult(val * 2));
+            var structuredTask = x.Task.I(val => Task.FromResult(val * 2))
+                                    .I(val => val * 2);
 
             x.SetCanceled();
-            return structuredTask.I(val => val * 2);
+            return structuredTask;
         })
         .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
 
@@ -85,7 +99,19 @@ public class StructuredConcurrencyTests
         .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
 
     [Fact]
-    public Task Test7_Ensure_CancellationTokenSource_Cancellation() =>
+    public Task Test7_Ensure_Cancellation_Chaining_MultipleStages() =>
+        Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
+        .Act(x =>
+        {
+            var structuredTask = x.Task.I(val => Task.FromResult(val * 2));
+
+            x.SetCanceled();
+            return structuredTask.I(val => val * 2);
+        })
+        .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
+
+    [Fact]
+    public Task Test8_Ensure_CancellationTokenSource_Cancellation() =>
         Arrange(() => 1)
         .Act(x =>
         {
