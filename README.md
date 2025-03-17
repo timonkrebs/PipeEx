@@ -1,51 +1,78 @@
 # PipeEx
+
 [![.NET](https://github.com/timonkrebs/PipeEx/actions/workflows/dotnet.yml/badge.svg)](https://github.com/timonkrebs/PipeEx/actions/workflows/dotnet.yml)
 [![NuGet](https://img.shields.io/nuget/dt/PipeEx.svg)](https://www.nuget.org/packages/PipeEx) 
 [![NuGet](https://img.shields.io/nuget/vpre/PipeEx.svg)](https://www.nuget.org/packages/PipeEx)
 
-PipeEx is a simple yet powerful library that provides extension methods for creating a fluent, pipe-like syntax in C#.  It allows you to chain function calls together in a readable and expressive way, improving code clarity and maintainability.
+PipeEx is a lightweight C# library that enables fluent, pipe-like function chaining. By leveraging the `I` (Infer) extension method, you can pass the result of one function directly into the next, resulting in cleaner and more maintainable code.
 
-## What is it?
+## Table of Contents
 
-PipeEx introduces the `I` (Infer) extension method, which acts as a "pipe" operator.  This allows you to pass the result of one function directly as input to the next, creating a chain of operations.  This is particularly useful when dealing with asynchronous operations or complex data transformations.
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Synchronous Operations](#synchronous-operations)
+  - [Asynchronous Operations](#asynchronous-operations)
+- [Planned Features](#planned-features)
+- [Contributing](#contributing)
 
+## Features
+
+- **Fluent Syntax:** Create readable chains of function calls.
+- **Asynchronous Support:** Seamlessly chains both synchronous and asynchronous operations (`Task<T>`).
+- **Simplified Code:** Reduces nesting and complexity, making your code easier to maintain.
+- **Lightweight:** No dependencies without compromising on expressiveness.
+
+## Installation
+
+Install PipeEx via NuGet:
+
+```bash
+dotnet add package PipeEx
+```
+
+For Structured Concurrency support, install:
+
+```bash
+dotnet add package PipeEx.StructuredConcurrency
+```
 
 ## Usage
 
-The core of PipeEx is the `I` extension method.
-```cs
+### Synchronous Operations
+
+The core feature of PipeEx is the `I` extension method. It lets you pipe the output of one function as the input to the next:
+
+```csharp
 public int Calc(int x) => x.I(FuncY)
                            .I(x => x + 2);
+```
 
-// automatically destructuring of tules
+You can also automatically destructure tuples:
+
+```csharp
 public int Calc(int x) => x.I(x => (x + 2, x + 4))
                            .I((x, y) => x + y);
 ```
 
-For Structured Concurrency use:
-[![NuGet](https://img.shields.io/nuget/dt/PipeEx.StructuredConcurrency.svg)](https://www.nuget.org/packages/PipeEx.StructuredConcurrency) 
-[![NuGet](https://img.shields.io/nuget/vpre/PipeEx.StructuredConcurrency.svg)](https://www.nuget.org/packages/PipeEx.StructuredConcurrency)
-```cs
-// await is handled automatically
+### Asynchronous Operations
+
+PipeEx supports chaining asynchronous operations. The library automatically handles awaiting tasks:
+
+```csharp
+// awaiting is handled automatically
 public Task<int> Calc(int x) => x.I(FuncXAsync)
                                  .I(x => x + 2)
                                  .I(FuncYAsync)
                                  .I(FuncY);
-
-// Branching/TaskGroups
-public Task<int> Calc(int x) => x.I((FuncXAsync, FuncYAsync().I(FuncY).I))
-                                 .I((x, y) => x + y);
 ```
 
-## Features
-- **Fluent Syntax**: Enables a clean and readable way to chain function calls.
-- **Asynchronous Support**: Works seamlessly with both synchronous and asynchronous operations (Task<T>).
-- **Simplified Code**: Reduces nesting and improves code maintainability.
-- **Lightweight**: A small and focused library with minimal dependencies.
+## Planned Features
 
-Planned:
-- **Cancelation**: Handles initialization and propagation of cancellation token. (StructuredTask<T>)
-- **Ressources**: Handles ressources that are not thread-safe like EF Core DbContext or WPF UI element upadtes
-  
+- **Structured Concurrency:** Declare asynchronous variables that are resolved at a later point.
+- **Cancellation:** Support for initializing and propagating cancellation tokens (e.g., StructuredTask<T>).
+- **Resource Management:** Enhanced handling for resources that are not thread-safe (like EF Core DbContext or WPF UI updates).
+
 ## Contributing
-Contributions are welcome!  Feel free to submit pull requests or open issues.
+
+Contributions are welcome! If you would like to submit improvements, please fork the repository and open a pull request. For major changes, please open an issue first to discuss what you would like to change.
