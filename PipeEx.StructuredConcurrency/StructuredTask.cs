@@ -29,10 +29,32 @@ public class StructuredTask<T> : IDisposable
 
     public void Dispose()
     {
-        if(mustHandleDisposing) CancellationTokenSource.Dispose();
-    }   
+        if (mustHandleDisposing) CancellationTokenSource.Dispose();
+    }
 
     public static implicit operator Task<T>(StructuredTask<T> structuredTask) => structuredTask.Task;
+}
+
+public class StructuredDeferedTask<T, TDefered> : StructuredTask<T>
+{
+    internal Dictionary<string, (Type, Task)> deferedTasks;
+    internal StructuredDeferedTask(Task<T> task, Task<TDefered> let, [CallerArgumentExpression("let")] string propertyName = "")
+        : base(task, new CancellationTokenSource())
+    {
+        deferedTasks = new()
+        {
+            [propertyName] = (typeof(TDefered), let)
+        };
+    }
+
+    internal StructuredDeferedTask(Task<T> task, Task<TDefered> let, CancellationTokenSource cancellationTokenSource, [CallerArgumentExpression("let")] string propertyName = "")
+    : base(task, cancellationTokenSource)
+    {
+        deferedTasks = new()
+        {
+            [propertyName] = (typeof(TDefered), let)
+        };
+    }
 }
 
 

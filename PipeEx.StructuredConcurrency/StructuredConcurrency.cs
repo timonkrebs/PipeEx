@@ -10,6 +10,33 @@ public static class StructuredConcurrency
         return await func(source);
     }
 
+    public static StructuredDeferedTask<TSource, TResult> Let<TSource, TResult>(this TSource source, Func<TSource, Task<TResult>> func, [CallerArgumentExpression("func")] string propertyName = "")
+    {
+        return new StructuredDeferedTask<TSource, TResult>(Task.FromResult(source), func(source), propertyName);
+    }
+
+    public static StructuredDeferedTask<TSource, TResult> Let<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func, [CallerArgumentExpression("func")] string propertyName = "")
+    {
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var impl = async () =>
+        {
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var f = await func(s);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return f;
+        };
+
+        return new StructuredDeferedTask<TSource, TResult>(source, impl(), propertyName);
+    }
+
+    public static StructuredDeferedTask<TSource, TResult> Let<TSource, TResult>(this StructuredDeferedTask<TSource, TResult> source, Func<TSource, Task<TResult>> func, [CallerArgumentExpression("func")] string propertyName = "")
+    {
+        source.deferedTasks.Add(propertyName, (typeof(TResult), func(source.Task.Result)));
+        return source;
+    }
+
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, StructuredTask<TResult>> func)
     {
         // This works because the structuredTask is assigned befor the await is hit.
