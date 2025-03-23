@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace PipeEx.StructuredConcurrency;
 
@@ -201,12 +202,16 @@ public static class StructuredConcurrency
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var impl = async () =>
         {
+            Regex regex = new Regex(@"\(([^)]*)\)");
+            Match match = regex.Match(propertyName);
+            var discard = Regex.Split(match.Groups[1].Value, @",\s*").Select(x => x.Trim().StartsWith("_")).ToArray();
+
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.Task;
+            var s = discard[0] ? default! : await source.Task;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d1 = await source.deferedTask1;
+            var d1 = discard[1] ? default! : await source.deferedTask1;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d2 = await source.deferedTask2;
+            var d2 = discard[2] ? default! : await source.deferedTask2;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var f = func(s, d1, d2);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
