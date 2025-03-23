@@ -130,6 +130,9 @@ public static class StructuredConcurrency
         return new StructuredTask<TResult>(tcs.Task, cts);
     }
 
+    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<Task<TDeferd>> func) => 
+        new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), func());
+
     public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<TSource, Task<TDeferd>> func) => 
         new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), func(source));
 
@@ -165,11 +168,11 @@ public static class StructuredConcurrency
             return f;
         };
 
-        return new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source, impl(), source.CancellationTokenSource);
+        return new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferedTask1, impl(), source.CancellationTokenSource);
     }
 
     public static StructuredDeferedTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferedTask<TSource, TDeferd1> source, Func<Task<TDeferd2>> func) => 
-        new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source, func());
+        new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferedTask1, func());
 
 
     // handle cases for Func<TSource, StructuredDeferedTask<TResult>> and Func<TSource, StructuredTask<TResult>> 
