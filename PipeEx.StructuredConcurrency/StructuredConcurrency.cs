@@ -10,33 +10,6 @@ public static class StructuredConcurrency
         return await func(source);
     }
 
-    public static StructuredDeferedTask<TSource, TResult> Let<TSource, TResult>(this TSource source, Func<TSource, Task<TResult>> func, [CallerArgumentExpression("func")] string propertyName = "")
-    {
-        return new StructuredDeferedTask<TSource, TResult>(Task.FromResult(source), func(source), propertyName);
-    }
-
-    public static StructuredDeferedTask<TSource, TResult> Let<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func, [CallerArgumentExpression("func")] string propertyName = "")
-    {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        var impl = async () =>
-        {
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source;
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = await func(s);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            return f;
-        };
-
-        return new StructuredDeferedTask<TSource, TResult>(source, impl(), propertyName);
-    }
-
-    public static StructuredDeferedTask<TSource, TResult> Let<TSource, TResult>(this StructuredDeferedTask<TSource, TResult> source, Func<TSource, Task<TResult>> func, [CallerArgumentExpression("func")] string propertyName = "")
-    {
-        source.deferedTasks.Add(propertyName, (typeof(TResult), func(source.Task.Result)));
-        return source;
-    }
-
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, StructuredTask<TResult>> func)
     {
         // This works because the structuredTask is assigned befor the await is hit.
@@ -46,7 +19,7 @@ public static class StructuredConcurrency
             structuredTask = func(source);
             return await structuredTask;
         };
-        
+
         impl();
         return structuredTask;
     }
@@ -155,5 +128,89 @@ public static class StructuredConcurrency
         };
         impl();
         return new StructuredTask<TResult>(tcs.Task, cts);
+    }
+
+    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<TSource, Task<TDeferd>> func) => 
+        new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), func(source));
+
+    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<TSource, Task<TDeferd>> func)
+    {
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var impl = async () =>
+        {
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var f = await func(s);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return f;
+        };
+
+        return new StructuredDeferedTask<TSource, TDeferd>(source, impl(), source.CancellationTokenSource);
+    }
+
+    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<Task<TDeferd>> func) => 
+        new StructuredDeferedTask<TSource, TDeferd>(source, func(), source.CancellationTokenSource);
+
+    public static StructuredDeferedTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferedTask<TSource, TDeferd1> source, Func<TSource, Task<TDeferd2>> func)
+    {
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var impl = async () =>
+        {
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var f = await func(s);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return f;
+        };
+
+        return new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source, impl(), source.CancellationTokenSource);
+    }
+
+    public static StructuredDeferedTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferedTask<TSource, TDeferd1> source, Func<Task<TDeferd2>> func) => 
+        new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source, func());
+
+
+    // handle cases for Func<TSource, StructuredDeferedTask<TResult>> and Func<TSource, StructuredTask<TResult>> 
+
+    public static StructuredDeferedTask<TResult, TDeferedSource> Await<TSource, TDeferedSource, TResult>(this StructuredDeferedTask<TSource, TDeferedSource> source, Func<TSource, TDeferedSource, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
+    {
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var impl = async () =>
+        {
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source.Task;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var d = await source.deferedTask1;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var f = func(s, d);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return f;
+        };
+
+        var sdt = new StructuredDeferedTask<TResult, TDeferedSource>(impl(), source.deferedTask1, source.CancellationTokenSource);
+        return sdt;
+    }
+
+    public static StructuredDeferedTask<TResult, TDeferedSource1, TDeferedSource2> Await<TSource, TDeferedSource1, TDeferedSource2, TResult>(this StructuredDeferedTask<TSource, TDeferedSource1, TDeferedSource2> source, Func<TSource, TDeferedSource1, TDeferedSource2, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
+    {
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var impl = async () =>
+        {
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source.Task;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var d1 = await source.deferedTask1;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var d2 = await source.deferedTask2;
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var f = func(s, d1, d2);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return f;
+        };
+
+        var sdt = new StructuredDeferedTask<TResult, TDeferedSource1, TDeferedSource2>(impl(), source.deferedTask1, source.deferedTask2, source.CancellationTokenSource);
+        return sdt;
     }
 }

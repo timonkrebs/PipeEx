@@ -35,26 +35,32 @@ public class StructuredTask<T> : IDisposable
     public static implicit operator Task<T>(StructuredTask<T> structuredTask) => structuredTask.Task;
 }
 
-public class StructuredDeferedTask<T, TDefered> : StructuredTask<T>
+public class StructuredDeferedTask<T, TDeferd> : StructuredTask<T>
 {
-    internal Dictionary<string, (Type, Task)> deferedTasks;
-    internal StructuredDeferedTask(Task<T> task, Task<TDefered> let, [CallerArgumentExpression("let")] string propertyName = "")
-        : base(task, new CancellationTokenSource())
-    {
-        deferedTasks = new()
-        {
-            [propertyName] = (typeof(TDefered), let)
-        };
-    }
+    internal Task<TDeferd> deferedTask1;
 
-    internal StructuredDeferedTask(Task<T> task, Task<TDefered> let, CancellationTokenSource cancellationTokenSource, [CallerArgumentExpression("let")] string propertyName = "")
-    : base(task, cancellationTokenSource)
-    {
-        deferedTasks = new()
-        {
-            [propertyName] = (typeof(TDefered), let)
-        };
-    }
+    internal StructuredDeferedTask(Task<T> task, Task<TDeferd> deferedTask)
+        : this(task, deferedTask, new CancellationTokenSource()) { }
+
+    internal StructuredDeferedTask(Task<T> task, Task<TDeferd> deferedTask1, CancellationTokenSource cancellationTokenSource)
+        : base(task, cancellationTokenSource) 
+        { 
+            this.deferedTask1 = deferedTask1;
+        }
+}
+
+public class StructuredDeferedTask<T, TDeferd1, TDeferd2> : StructuredDeferedTask<T, TDeferd1>
+{
+    internal Task<TDeferd2> deferedTask2;
+
+    internal StructuredDeferedTask(Task<T> task, Task<TDeferd1> deferedTask1, Task<TDeferd2> deferedTask2)
+        : this(task, deferedTask1, deferedTask2, new CancellationTokenSource()) { }
+
+    internal StructuredDeferedTask(Task<T> task, Task<TDeferd1> deferedTask1, Task<TDeferd2> deferedTask2, CancellationTokenSource cancellationTokenSource)
+        : base(task, deferedTask1, cancellationTokenSource) 
+        { 
+            this.deferedTask2 = deferedTask2;
+        }
 }
 
 
