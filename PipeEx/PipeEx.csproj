@@ -17,7 +17,7 @@
     <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageTags>Pipe, Async, Tuple, Destructuring, Functional, Functional Programming</PackageTags>
+    <PackageTags>Pipe, Async, Tuple, Destructuring, Functional, Functional Programming, Expression, Expressions, Fluent, Flow</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
