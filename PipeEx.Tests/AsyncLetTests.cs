@@ -84,4 +84,30 @@ public class AsyncLetTests
             .Let(() => Task.FromResult(2))
             .Await((_x, y, z) => z * y))
         .Assert(r => Assert.Equal(20, r));
+
+    [Fact]
+    public Task Let_Source_FuncReturnsStructuredTask_Success() =>
+        Arrange(() => 2)
+        .Act(x =>
+            x.Let(src =>
+                new StructuredTask<int>(Task.FromResult(src * 5), CancellationToken.None))
+            .Await((original, deferred) => original + deferred))
+        .Assert(async resultTask =>
+        {
+            var result = await resultTask;
+            Assert.Equal(12, result);
+        });
+
+    [Fact]
+    public Task Let_StructuredTaskSource_FuncReturnsStructuredTask_Success() =>
+        Arrange(() => new StructuredTask<int>(Task.FromResult(3), CancellationToken.None))
+        .Act(st =>
+            st.Let(src =>
+                new StructuredTask<int>(Task.FromResult(src * 4), CancellationToken.None))
+            .Await((original, deferred) => original * deferred))
+        .Assert(async resultTask =>
+        {
+            var result = await resultTask;
+            Assert.Equal(36, result);
+        });
 }

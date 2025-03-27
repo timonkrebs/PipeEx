@@ -13,7 +13,6 @@ public static class StructuredConcurrency
 
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -61,7 +60,7 @@ public static class StructuredConcurrency
             {
                 if (source.IsCanceled)
                 {
-                    cts.Cancel(); // Ensure consistent cancellation.
+                    cts.Cancel();
                     tcs.SetException(new OperationCanceledException());
                     return;
                 }
@@ -74,7 +73,7 @@ public static class StructuredConcurrency
             }
             catch (Exception ex)
             {
-                cts.Cancel(); // Ensure consistent cancellation.
+                cts.Cancel();
                 tcs.SetException(ex);
             }
         };
@@ -110,7 +109,7 @@ public static class StructuredConcurrency
             {
                 if (source.Task.IsCanceled)
                 {
-                    cts.Cancel(); // Ensure consistent cancellation.
+                    cts.Cancel();
                     tcs.SetException(new OperationCanceledException());
                     return;
                 }
@@ -123,7 +122,7 @@ public static class StructuredConcurrency
             }
             catch (Exception ex)
             {
-                cts.Cancel(); // Ensure consistent cancellation.
+                cts.Cancel();
                 tcs.SetException(ex);
             }
         };
@@ -137,6 +136,7 @@ public static class StructuredConcurrency
     public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<TSource, Task<TDeferd>> func) => 
         new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), func(source));
 
+    [OverloadResolutionPriority(1)]
     public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<TSource, Task<TDeferd>> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -175,144 +175,90 @@ public static class StructuredConcurrency
     public static StructuredDeferedTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferedTask<TSource, TDeferd1> source, Func<Task<TDeferd2>> func) => 
         new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferedTask1, func());
 
-
     public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<TSource, StructuredTask<TDeferd>> func)
     {
         var innerStructuredTask = func(source);
-        // Create a new CTS for the resulting StructuredDeferedTask
         var cts = new CancellationTokenSource();
-        // Ensure the new CTS can cancel the inner task
         var registration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
 
         var deferedCompletionSource = new TaskCompletionSource<TDeferd>();
-        // Wrap the inner task's await logic to handle completion and cancellation propagation
         var wrapperTask = async () => {
             try {
                 var result = await innerStructuredTask;
                 deferedCompletionSource.SetResult(result);
             } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerStructuredTask.CancellationTokenSource.Token) {
-                // If cancellation occurs either via the new CTS or the inner task's CTS, cancel the wrapper.
                 deferedCompletionSource.SetCanceled(cts.Token);
             } catch (Exception ex) {
                 deferedCompletionSource.SetException(ex);
-                cts.Cancel(); // If the inner task fails, cancel the wrapper CTS.
+                cts.Cancel();
             } finally {
-                registration.Dispose(); // Clean up the cancellation registration
+                registration.Dispose();
             }
         };
-        wrapperTask(); // Fire and forget
-
-        // Return a new StructuredDeferedTask using the appropriate constructor
+        wrapperTask();
         return new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), deferedCompletionSource.Task, cts);
     }
 
+    [OverloadResolutionPriority(1)]
     public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TDeferd>> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        // Link the new CTS to the source task's CTS
         var cts = CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token);
         var deferedTaskCompletionSource = new TaskCompletionSource<TDeferd>();
-        StructuredTask<TDeferd>? innerStructuredTask = null; // Declare here for access in catch block
+        StructuredTask<TDeferd>? innerStructuredTask = null;
 
         var deferedImpl = async () =>
         {
             try
             {
-                var s = await source.Task; // Await the source task first
-                cts.Token.ThrowIfCancellationRequested(); // Check cancellation after source completes
-
-                innerStructuredTask = func(s); // Execute the function to get the inner task
-                // Link the combined token to the inner task
+                var s = await source.Task;
+                cts.Token.ThrowIfCancellationRequested();
+                innerStructuredTask = func(s);
                 using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
 
-                var result = await innerStructuredTask; // Await the inner task
+                var result = await innerStructuredTask;
                 deferedTaskCompletionSource.SetResult(result);
             }
             catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || (innerStructuredTask != null && ex.CancellationToken == innerStructuredTask.CancellationTokenSource.Token))
             {
-               // If cancellation comes from the linked token or the inner task itself
                deferedTaskCompletionSource.SetCanceled(cts.Token);
             }
             catch (Exception ex)
             {
                 deferedTaskCompletionSource.SetException(ex);
-                cts.Cancel(); // Cancel related tasks on exception
+                cts.Cancel();
             }
         };
-        deferedImpl(); // Fire and forget
+        deferedImpl();
 
-        // Use the constructor: Task<T>, Task<TDeferd>, CancellationTokenSource
         return new StructuredDeferedTask<TSource, TDeferd>(source.Task, deferedTaskCompletionSource.Task, cts);
     }
 
     public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TSource2, TDeferd>(this TSource source, Func<TSource, StructuredDeferedTask<TSource2, TDeferd>> func)
     {
         var innerDeferedTask = func(source);
-        // Create a new CTS for the resulting StructuredDeferedTask
         var cts = new CancellationTokenSource();
-        // Ensure the new CTS can cancel the inner defered task
         var registration = cts.Token.Register(() => innerDeferedTask.CancellationTokenSource.Cancel());
 
         var deferedCompletionSource = new TaskCompletionSource<TDeferd>();
-        // Wrap the inner task's await logic
         var wrapperTask = async () => {
             try {
-                var result = await innerDeferedTask.deferedTask1; // Await the inner defered task
+                var result = await innerDeferedTask.deferedTask1;
                 deferedCompletionSource.SetResult(result);
             } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerDeferedTask.CancellationTokenSource.Token) {
-                // If cancellation occurs either via the new CTS or the inner task's CTS, cancel the wrapper.
                 deferedCompletionSource.SetCanceled(cts.Token);
             } catch (Exception ex) {
                 deferedCompletionSource.SetException(ex);
-                cts.Cancel(); // If the inner task fails, cancel the wrapper CTS.
+                cts.Cancel();
             } finally {
-                registration.Dispose(); // Clean up registration
+                registration.Dispose();
             }
         };
-        wrapperTask(); // Fire and forget
+        wrapperTask();
 
-        // Return a new StructuredDeferedTask
         return new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), deferedCompletionSource.Task, cts);
     }
 
-    public static StructuredDeferedTask<TSource, TSource2, TDeferd> Let<TSource, TSource2, TDeferd>(this StructuredTask<TSource> source, Func<TSource, StructuredDeferedTask<TSource2, TDeferd>> func)
-    {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        // Link the new CTS to the source task's CTS
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token);
-        var deferedTaskCompletionSource = new TaskCompletionSource<TDeferd>();
-        StructuredDeferedTask<TSource2, TDeferd> innerDeferedTask = null; // Declare here for access in catch block
-
-        var deferedImpl = async () =>
-        {
-            try
-            {
-                var s = await source.Task; // Await the source task
-                cts.Token.ThrowIfCancellationRequested(); // Check for cancellation
-
-                innerDeferedTask = func(s); // Execute the function
-                // Link the combined token to the inner defered task's source
-                using var innerRegistration = cts.Token.Register(() => innerDeferedTask.CancellationTokenSource.Cancel());
-
-                var result = await innerDeferedTask.deferedTask1; // Await the inner defered task
-                deferedTaskCompletionSource.SetResult(result);
-            }
-             catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || (innerDeferedTask != null && ex.CancellationToken == innerDeferedTask.CancellationTokenSource.Token))
-            {
-                // If cancellation comes from the linked token or the inner task itself
-                deferedTaskCompletionSource.SetCanceled(cts.Token);
-            }
-            catch (Exception ex)
-            {
-                deferedTaskCompletionSource.SetException(ex);
-                cts.Cancel(); // Cancel related tasks on exception
-            }
-        };
-        deferedImpl(); // Fire and forget
-
-        // Use the constructor: Task<T>, Task<TDeferd>, CancellationTokenSource
-        return new StructuredDeferedTask<TSource, TSource2, TDeferd>(source.Task, innerDeferedTask.Task, deferedTaskCompletionSource.Task, cts);
-    }
 
     public static StructuredDeferedTask<TResult, TDeferedSource> Await<TSource, TDeferedSource, TResult>(this StructuredDeferedTask<TSource, TDeferedSource> source, Func<TSource, TDeferedSource, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
     {
@@ -333,6 +279,7 @@ public static class StructuredConcurrency
         return sdt;
     }
 
+    [OverloadResolutionPriority(1)]
     public static StructuredDeferedTask<TResult, TDeferedSource1, TDeferedSource2> Await<TSource, TDeferedSource1, TDeferedSource2, TResult>(this StructuredDeferedTask<TSource, TDeferedSource1, TDeferedSource2> source, Func<TSource, TDeferedSource1, TDeferedSource2, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
