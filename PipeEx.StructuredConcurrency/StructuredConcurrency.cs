@@ -6,9 +6,14 @@ namespace PipeEx.StructuredConcurrency;
 public static class StructuredConcurrency
 {
     [OverloadResolutionPriority(1)]
-    public static async StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, Task<TResult>> func)
+    public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, Task<TResult>> func)
     {
-        return await func(source);
+        var impl = async () =>
+        {
+            return await func(source);
+        };
+
+        return new StructuredTask<TResult>(impl());
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, StructuredTask<TResult>> func)
@@ -24,9 +29,14 @@ public static class StructuredConcurrency
         return structuredTask;
     }
 
-    public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, TResult> func)
+    public static StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, TResult> func)
     {
-        return func(await source);
+        var impl = async () =>
+        {
+            return func(await source);
+        };
+
+        return new StructuredTask<TResult>(impl());
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, TResult> func)
@@ -44,9 +54,14 @@ public static class StructuredConcurrency
         return new StructuredTask<TResult>(impl(), source.CancellationTokenSource);
     }
 
-    public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, Task<TResult>> func)
+    public static StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, Task<TResult>> func)
     {
-        return await func(await source);
+        var impl = async () =>
+        {
+            return await func(await source);
+        };
+
+        return new StructuredTask<TResult>(impl());
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, StructuredTask<TResult>> func)
@@ -258,7 +273,6 @@ public static class StructuredConcurrency
 
         return new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), deferedCompletionSource.Task, cts);
     }
-
 
     public static StructuredDeferedTask<TResult, TDeferedSource> Await<TSource, TDeferedSource, TResult>(this StructuredDeferedTask<TSource, TDeferedSource> source, Func<TSource, TDeferedSource, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
     {

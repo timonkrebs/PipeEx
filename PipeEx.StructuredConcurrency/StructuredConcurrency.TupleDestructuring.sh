@@ -18,10 +18,8 @@ for item in $(seq 1 12); do
 
 cat << EOF >> $fileName
 
-    public static async StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, Task<TResult>> func)
-    {
-        return await func($tv);
-    }
+    public static StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, Task<TResult>> func) => 
+        new StructuredTask<TResult>(func($tv));
 
     public static StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, StructuredTask<TResult>> func)
     {
@@ -36,10 +34,15 @@ cat << EOF >> $fileName
         return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
     }
 
-    public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
+    public static StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
     {
-        var source = await s;
-        return func($tv);
+        var impl = async () =>
+        {
+            var source = await s;
+            return func($tv);
+        };
+
+        return new StructuredTask<TResult>(impl());
     }
 
     public static StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, TResult> func)
@@ -53,10 +56,15 @@ cat << EOF >> $fileName
         return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
     }
 
-    public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, Task<TResult>> func)
+    public static StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, Task<TResult>> func)
     {
-        var source = await s;
-        return await func($tv);
+        var impl = async () =>
+        {
+            var source = await s;
+            return await func($tv);
+        };
+
+        return new StructuredTask<TResult>(impl());
     }
 
     public static StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, Task<TResult>> func)
