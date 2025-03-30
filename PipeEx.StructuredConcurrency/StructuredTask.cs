@@ -12,7 +12,10 @@ public class StructuredTask<T> : IDisposable
 
     internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource()) { }
 
-    internal StructuredTask(StructuredTask<T> task) : this(task.Task, task.CancellationTokenSource) { }
+    internal StructuredTask(StructuredTask<T> task) : this(task.Task, task.CancellationTokenSource)
+    {
+        task.mustHandleDisposing = false;
+    }
 
     internal StructuredTask(Task<T> task, CancellationTokenSource cancellationTokenSource, bool mustHandleDisposing = true)
     {
@@ -40,13 +43,16 @@ public class StructuredDeferedTask<T, TDeferd> : StructuredTask<T>
     internal Task<TDeferd> deferedTask1;
 
     internal StructuredDeferedTask(Task<T> task, Task<TDeferd> deferedTask)
-        : this(task, deferedTask, new CancellationTokenSource()) { }
+    : this(task, deferedTask, new CancellationTokenSource()) { }
+
+    internal StructuredDeferedTask(Task<T> task, StructuredDeferedTask<object, TDeferd> deferedTask)
+    : this(task, deferedTask.deferedTask1, deferedTask.CancellationTokenSource) { }
 
     internal StructuredDeferedTask(Task<T> task, Task<TDeferd> deferedTask1, CancellationTokenSource cancellationTokenSource)
-        : base(task, cancellationTokenSource) 
-        { 
-            this.deferedTask1 = deferedTask1;
-        }
+        : base(task, cancellationTokenSource)
+    {
+        this.deferedTask1 = deferedTask1;
+    }
 }
 
 public class StructuredDeferedTask<T, TDeferd1, TDeferd2> : StructuredDeferedTask<T, TDeferd1>
@@ -57,12 +63,11 @@ public class StructuredDeferedTask<T, TDeferd1, TDeferd2> : StructuredDeferedTas
         : this(task, deferedTask1, deferedTask2, new CancellationTokenSource()) { }
 
     internal StructuredDeferedTask(Task<T> task, Task<TDeferd1> deferedTask1, Task<TDeferd2> deferedTask2, CancellationTokenSource cancellationTokenSource)
-        : base(task, deferedTask1, cancellationTokenSource) 
-        { 
-            this.deferedTask2 = deferedTask2;
-        }
+        : base(task, deferedTask1, cancellationTokenSource)
+    {
+        this.deferedTask2 = deferedTask2;
+    }
 }
-
 
 /// <summary>Represents a builder for asynchronous methods that returns a <see cref="StructuredTask{T}"/>.</summary>
 /// <typeparam name="T">The type of the result.</typeparam>
