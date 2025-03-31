@@ -41,7 +41,7 @@ public static class StructuredConcurrency
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             return f;
         };
-        return new StructuredTask<TResult>(impl(), source.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), source);
     }
 
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, Task<TResult>> func)
@@ -150,11 +150,11 @@ public static class StructuredConcurrency
             return f;
         };
 
-        return new StructuredDeferedTask<TSource, TDeferd>(source, impl(), source.CancellationTokenSource);
+        return new StructuredDeferedTask<TSource, TDeferd>(source, impl());
     }
 
     public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<Task<TDeferd>> func) => 
-        new StructuredDeferedTask<TSource, TDeferd>(source, func(), source.CancellationTokenSource);
+        new StructuredDeferedTask<TSource, TDeferd>(source, func());
 
     public static StructuredDeferedTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferedTask<TSource, TDeferd1> source, Func<TSource, Task<TDeferd2>> func)
     {
@@ -169,7 +169,7 @@ public static class StructuredConcurrency
             return f;
         };
 
-        return new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferedTask1, impl(), source.CancellationTokenSource);
+        return new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferedTask1, impl());
     }
 
     public static StructuredDeferedTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferedTask<TSource, TDeferd1> source, Func<Task<TDeferd2>> func) => 

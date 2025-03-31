@@ -33,7 +33,7 @@ cat << EOF >> $fileName
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
@@ -50,7 +50,7 @@ cat << EOF >> $fileName
             return func($tv);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, Task<TResult>> func)
@@ -67,7 +67,7 @@ cat << EOF >> $fileName
             return await func($tv);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, StructuredTask<TResult>> func)

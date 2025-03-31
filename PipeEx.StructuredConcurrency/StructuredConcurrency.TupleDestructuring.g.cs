@@ -18,7 +18,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this Task<(TSource1, TSource2)> s, Func<TSource1, TSource2, TResult> func)
@@ -35,7 +35,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this Task<(TSource1, TSource2)> s, Func<TSource1, TSource2, Task<TResult>> func)
@@ -52,7 +52,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TResult>(this Task<(TSource1, TSource2)> s, Func<TSource1, TSource2, StructuredTask<TResult>> func)
@@ -180,7 +180,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this Task<(TSource1, TSource2, TSource3)> s, Func<TSource1, TSource2, TSource3, TResult> func)
@@ -197,7 +197,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this Task<(TSource1, TSource2, TSource3)> s, Func<TSource1, TSource2, TSource3, Task<TResult>> func)
@@ -214,7 +214,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this Task<(TSource1, TSource2, TSource3)> s, Func<TSource1, TSource2, TSource3, StructuredTask<TResult>> func)
@@ -342,7 +342,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4)> s, Func<TSource1, TSource2, TSource3, TSource4, TResult> func)
@@ -359,7 +359,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4)> s, Func<TSource1, TSource2, TSource3, TSource4, Task<TResult>> func)
@@ -376,7 +376,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4)> s, Func<TSource1, TSource2, TSource3, TSource4, StructuredTask<TResult>> func)
@@ -504,7 +504,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TResult> func)
@@ -521,7 +521,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, Task<TResult>> func)
@@ -538,7 +538,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, StructuredTask<TResult>> func)
@@ -666,7 +666,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult> func)
@@ -683,7 +683,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, Task<TResult>> func)
@@ -700,7 +700,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, StructuredTask<TResult>> func)
@@ -828,7 +828,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult> func)
@@ -845,7 +845,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, Task<TResult>> func)
@@ -862,7 +862,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, StructuredTask<TResult>> func)
@@ -990,7 +990,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult> func)
@@ -1007,7 +1007,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, Task<TResult>> func)
@@ -1024,7 +1024,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, StructuredTask<TResult>> func)
@@ -1152,7 +1152,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult> func)
@@ -1169,7 +1169,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, Task<TResult>> func)
@@ -1186,7 +1186,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, StructuredTask<TResult>> func)
@@ -1314,7 +1314,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult> func)
@@ -1331,7 +1331,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, Task<TResult>> func)
@@ -1348,7 +1348,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, StructuredTask<TResult>> func)
@@ -1476,7 +1476,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult> func)
@@ -1493,7 +1493,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, Task<TResult>> func)
@@ -1510,7 +1510,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, StructuredTask<TResult>> func)
@@ -1638,7 +1638,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult> func)
@@ -1655,7 +1655,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, Task<TResult>> func)
@@ -1672,7 +1672,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, StructuredTask<TResult>> func)
@@ -1800,7 +1800,7 @@ public static class TupleDestructuring
             return await structuredTask;
         };
 
-        return new StructuredTask<TResult>(impl(), structuredTask.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult> func)
@@ -1817,7 +1817,7 @@ public static class TupleDestructuring
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, Task<TResult>> func)
@@ -1834,7 +1834,7 @@ public static class TupleDestructuring
             return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13);
         };
 
-        return new StructuredTask<TResult>(impl(), s.CancellationTokenSource);
+        return new StructuredTask<TResult>(impl(), s);
     }
 
      public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, StructuredTask<TResult>> func)

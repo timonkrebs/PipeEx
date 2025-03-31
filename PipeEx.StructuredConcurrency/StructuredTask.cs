@@ -2,38 +2,38 @@ using System.Runtime.CompilerServices;
 
 namespace PipeEx.StructuredConcurrency;
 
-[AsyncMethodBuilder(typeof(PoolingAsyncStructuredTaskMethodBuilder<>))]
-public class StructuredTask<T> : IDisposable
+public abstract class StructuredTask
 {
-    private bool mustHandleDisposing = false;
+    internal bool MustHandleDisposing { get; set; }
+
+    public CancellationTokenSource CancellationTokenSource { get; }
+
+    public StructuredTask(CancellationTokenSource cancellationTokenSource, bool mustHandleDisposing = true)
+    {
+        MustHandleDisposing = mustHandleDisposing;
+        CancellationTokenSource = cancellationTokenSource;
+    }
+
+    public void Dispose() { if (MustHandleDisposing) CancellationTokenSource.Dispose(); }
+}
+
+[AsyncMethodBuilder(typeof(PoolingAsyncStructuredTaskMethodBuilder<>))]
+public class StructuredTask<T> : StructuredTask, IDisposable
+{
+    public StructuredTask(Task<T> task, StructuredTask previousTask)
+        : this(task, previousTask.CancellationTokenSource) { previousTask.MustHandleDisposing = false; }
 
     public StructuredTask(Task<T> task, CancellationToken cancellationToken)
-    : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken), false) { }
+        : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken), false) { }
 
     internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource()) { }
 
-    internal StructuredTask(StructuredTask<T> task) : this(task.Task, task.CancellationTokenSource)
-    {
-        task.mustHandleDisposing = false;
-    }
-
-    internal StructuredTask(Task<T> task, CancellationTokenSource cancellationTokenSource, bool mustHandleDisposing = true)
-    {
-        Task = task;
-        CancellationTokenSource = cancellationTokenSource;
-        this.mustHandleDisposing = mustHandleDisposing;
-    }
+    internal StructuredTask(Task<T> task, CancellationTokenSource cancellationTokenSource, bool mustHandleDisposing = true) 
+        : base(cancellationTokenSource, mustHandleDisposing) { Task = task; }
 
     internal Task<T> Task { get; }
 
-    public CancellationTokenSource CancellationTokenSource { get; internal set; }
-
     public TaskAwaiter<T> GetAwaiter() => Task.GetAwaiter();
-
-    public void Dispose()
-    {
-        if (mustHandleDisposing) CancellationTokenSource.Dispose();
-    }
 
     public static implicit operator Task<T>(StructuredTask<T> structuredTask) => structuredTask.Task;
 }
@@ -43,16 +43,13 @@ public class StructuredDeferedTask<T, TDeferd> : StructuredTask<T>
     internal Task<TDeferd> deferedTask1;
 
     internal StructuredDeferedTask(Task<T> task, Task<TDeferd> deferedTask)
-    : this(task, deferedTask, new CancellationTokenSource()) { }
+        : this(task, deferedTask, new CancellationTokenSource()) { }
 
-    internal StructuredDeferedTask(Task<T> task, StructuredDeferedTask<object, TDeferd> deferedTask)
-    : this(task, deferedTask.deferedTask1, deferedTask.CancellationTokenSource) { }
+    internal StructuredDeferedTask(StructuredTask<T> task, Task<TDeferd> deferedTask)
+        : this(task, deferedTask, task.CancellationTokenSource) { task.MustHandleDisposing = false; }
 
     internal StructuredDeferedTask(Task<T> task, Task<TDeferd> deferedTask1, CancellationTokenSource cancellationTokenSource)
-        : base(task, cancellationTokenSource)
-    {
-        this.deferedTask1 = deferedTask1;
-    }
+        : base(task, cancellationTokenSource) { this.deferedTask1 = deferedTask1; }
 }
 
 public class StructuredDeferedTask<T, TDeferd1, TDeferd2> : StructuredDeferedTask<T, TDeferd1>
@@ -63,10 +60,7 @@ public class StructuredDeferedTask<T, TDeferd1, TDeferd2> : StructuredDeferedTas
         : this(task, deferedTask1, deferedTask2, new CancellationTokenSource()) { }
 
     internal StructuredDeferedTask(Task<T> task, Task<TDeferd1> deferedTask1, Task<TDeferd2> deferedTask2, CancellationTokenSource cancellationTokenSource)
-        : base(task, deferedTask1, cancellationTokenSource)
-    {
-        this.deferedTask2 = deferedTask2;
-    }
+        : base(task, deferedTask1, cancellationTokenSource) { this.deferedTask2 = deferedTask2; }
 }
 
 /// <summary>Represents a builder for asynchronous methods that returns a <see cref="StructuredTask{T}"/>.</summary>
