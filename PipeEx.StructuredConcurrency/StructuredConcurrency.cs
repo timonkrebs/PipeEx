@@ -184,6 +184,7 @@ public static class StructuredConcurrency
         var deferedCompletionSource = new TaskCompletionSource<TDeferd>();
         var wrapperTask = async () => {
             try {
+                await Task.Yield();
                 var result = await innerStructuredTask;
                 deferedCompletionSource.SetResult(result);
             } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerStructuredTask.CancellationTokenSource.Token) {
@@ -211,6 +212,7 @@ public static class StructuredConcurrency
         {
             try
             {
+                await Task.Yield();
                 var s = await source.Task;
                 cts.Token.ThrowIfCancellationRequested();
                 innerStructuredTask = func(s);
@@ -243,6 +245,7 @@ public static class StructuredConcurrency
         var deferedCompletionSource = new TaskCompletionSource<TDeferd>();
         var wrapperTask = async () => {
             try {
+                await Task.Yield();
                 var result = await innerDeferedTask.deferedTask1;
                 deferedCompletionSource.SetResult(result);
             } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerDeferedTask.CancellationTokenSource.Token) {
