@@ -130,14 +130,14 @@ public static class StructuredConcurrency
         return new StructuredTask<TResult>(tcs.Task, cts);
     }
 
-    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<Task<TDeferd>> func) => 
-        new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), func());
+    public static StructuredDeferredTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<Task<TDeferd>> func) => 
+        new StructuredDeferredTask<TSource, TDeferd>(Task.FromResult(source), func());
 
-    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<TSource, Task<TDeferd>> func) => 
-        new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), func(source));
+    public static StructuredDeferredTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<TSource, Task<TDeferd>> func) => 
+        new StructuredDeferredTask<TSource, TDeferd>(Task.FromResult(source), func(source));
 
     [OverloadResolutionPriority(1)]
-    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<TSource, Task<TDeferd>> func)
+    public static StructuredDeferredTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<TSource, Task<TDeferd>> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var impl = async () =>
@@ -150,13 +150,13 @@ public static class StructuredConcurrency
             return f;
         };
 
-        return new StructuredDeferedTask<TSource, TDeferd>(source, impl());
+        return new StructuredDeferredTask<TSource, TDeferd>(source, impl());
     }
 
-    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<Task<TDeferd>> func) => 
-        new StructuredDeferedTask<TSource, TDeferd>(source, func());
+    public static StructuredDeferredTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<Task<TDeferd>> func) => 
+        new StructuredDeferredTask<TSource, TDeferd>(source, func());
 
-    public static StructuredDeferedTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferedTask<TSource, TDeferd1> source, Func<TSource, Task<TDeferd2>> func)
+    public static StructuredDeferredTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferredTask<TSource, TDeferd1> source, Func<TSource, Task<TDeferd2>> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var impl = async () =>
@@ -169,46 +169,46 @@ public static class StructuredConcurrency
             return f;
         };
 
-        return new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferedTask1, impl());
+        return new StructuredDeferredTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferredTask1, impl());
     }
 
-    public static StructuredDeferedTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferedTask<TSource, TDeferd1> source, Func<Task<TDeferd2>> func) => 
-        new StructuredDeferedTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferedTask1, func());
+    public static StructuredDeferredTask<TSource, TDeferd1, TDeferd2> Let<TSource, TDeferd1, TDeferd2>(this StructuredDeferredTask<TSource, TDeferd1> source, Func<Task<TDeferd2>> func) => 
+        new StructuredDeferredTask<TSource, TDeferd1, TDeferd2>(source.Task, source.deferredTask1, func());
 
-    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<TSource, StructuredTask<TDeferd>> func)
+    public static StructuredDeferredTask<TSource, TDeferd> Let<TSource, TDeferd>(this TSource source, Func<TSource, StructuredTask<TDeferd>> func)
     {
         var innerStructuredTask = func(source);
         var cts = new CancellationTokenSource();
         var registration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
 
-        var deferedCompletionSource = new TaskCompletionSource<TDeferd>();
+        var deferredCompletionSource = new TaskCompletionSource<TDeferd>();
         var wrapperTask = async () => {
             try {
                 await Task.Yield();
                 var result = await innerStructuredTask;
-                deferedCompletionSource.SetResult(result);
+                deferredCompletionSource.SetResult(result);
             } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerStructuredTask.CancellationTokenSource.Token) {
-                deferedCompletionSource.SetCanceled(cts.Token);
+                deferredCompletionSource.SetCanceled(cts.Token);
             } catch (Exception ex) {
-                deferedCompletionSource.SetException(ex);
+                deferredCompletionSource.SetException(ex);
                 cts.Cancel();
             } finally {
                 registration.Dispose();
             }
         };
         wrapperTask();
-        return new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), deferedCompletionSource.Task, cts);
+        return new StructuredDeferredTask<TSource, TDeferd>(Task.FromResult(source), deferredCompletionSource.Task, cts);
     }
 
     [OverloadResolutionPriority(1)]
-    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TDeferd>> func)
+    public static StructuredDeferredTask<TSource, TDeferd> Let<TSource, TDeferd>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TDeferd>> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var cts = CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token);
-        var deferedTaskCompletionSource = new TaskCompletionSource<TDeferd>();
+        var deferredTaskCompletionSource = new TaskCompletionSource<TDeferd>();
         StructuredTask<TDeferd>? innerStructuredTask = null;
 
-        var deferedImpl = async () =>
+        var deferredImpl = async () =>
         {
             try
             {
@@ -219,39 +219,39 @@ public static class StructuredConcurrency
                 using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
 
                 var result = await innerStructuredTask;
-                deferedTaskCompletionSource.SetResult(result);
+                deferredTaskCompletionSource.SetResult(result);
             }
             catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || (innerStructuredTask != null && ex.CancellationToken == innerStructuredTask.CancellationTokenSource.Token))
             {
-               deferedTaskCompletionSource.SetCanceled(cts.Token);
+               deferredTaskCompletionSource.SetCanceled(cts.Token);
             }
             catch (Exception ex)
             {
-                deferedTaskCompletionSource.SetException(ex);
+                deferredTaskCompletionSource.SetException(ex);
                 cts.Cancel();
             }
         };
-        deferedImpl();
+        deferredImpl();
 
-        return new StructuredDeferedTask<TSource, TDeferd>(source.Task, deferedTaskCompletionSource.Task, cts);
+        return new StructuredDeferredTask<TSource, TDeferd>(source.Task, deferredTaskCompletionSource.Task, cts);
     }
 
-    public static StructuredDeferedTask<TSource, TDeferd> Let<TSource, TSource2, TDeferd>(this TSource source, Func<TSource, StructuredDeferedTask<TSource2, TDeferd>> func)
+    public static StructuredDeferredTask<TSource, TDeferd> Let<TSource, TSource2, TDeferd>(this TSource source, Func<TSource, StructuredDeferredTask<TSource2, TDeferd>> func)
     {
-        var innerDeferedTask = func(source);
+        var innerDeferredTask = func(source);
         var cts = new CancellationTokenSource();
-        var registration = cts.Token.Register(() => innerDeferedTask.CancellationTokenSource.Cancel());
+        var registration = cts.Token.Register(() => innerDeferredTask.CancellationTokenSource.Cancel());
 
-        var deferedCompletionSource = new TaskCompletionSource<TDeferd>();
+        var deferredCompletionSource = new TaskCompletionSource<TDeferd>();
         var wrapperTask = async () => {
             try {
                 await Task.Yield();
-                var result = await innerDeferedTask.deferedTask1;
-                deferedCompletionSource.SetResult(result);
-            } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerDeferedTask.CancellationTokenSource.Token) {
-                deferedCompletionSource.SetCanceled(cts.Token);
+                var result = await innerDeferredTask.deferredTask1;
+                deferredCompletionSource.SetResult(result);
+            } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerDeferredTask.CancellationTokenSource.Token) {
+                deferredCompletionSource.SetCanceled(cts.Token);
             } catch (Exception ex) {
-                deferedCompletionSource.SetException(ex);
+                deferredCompletionSource.SetException(ex);
                 cts.Cancel();
             } finally {
                 registration.Dispose();
@@ -259,11 +259,11 @@ public static class StructuredConcurrency
         };
         wrapperTask();
 
-        return new StructuredDeferedTask<TSource, TDeferd>(Task.FromResult(source), deferedCompletionSource.Task, cts);
+        return new StructuredDeferredTask<TSource, TDeferd>(Task.FromResult(source), deferredCompletionSource.Task, cts);
     }
 
 
-    public static StructuredDeferedTask<TResult, TDeferedSource> Await<TSource, TDeferedSource, TResult>(this StructuredDeferedTask<TSource, TDeferedSource> source, Func<TSource, TDeferedSource, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
+    public static StructuredDeferredTask<TResult, TDeferredSource> Await<TSource, TDeferredSource, TResult>(this StructuredDeferredTask<TSource, TDeferredSource> source, Func<TSource, TDeferredSource, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var impl = async () =>
@@ -271,19 +271,19 @@ public static class StructuredConcurrency
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var s = await source.Task;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d = await source.deferedTask1;
+            var d = await source.deferredTask1;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var f = func(s, d);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             return f;
         };
 
-        var sdt = new StructuredDeferedTask<TResult, TDeferedSource>(impl(), source.deferedTask1, source.CancellationTokenSource);
+        var sdt = new StructuredDeferredTask<TResult, TDeferredSource>(impl(), source.deferredTask1, source.CancellationTokenSource);
         return sdt;
     }
 
     [OverloadResolutionPriority(1)]
-    public static StructuredDeferedTask<TResult, TDeferedSource1, TDeferedSource2> Await<TSource, TDeferedSource1, TDeferedSource2, TResult>(this StructuredDeferedTask<TSource, TDeferedSource1, TDeferedSource2> source, Func<TSource, TDeferedSource1, TDeferedSource2, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
+    public static StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2> Await<TSource, TDeferredSource1, TDeferredSource2, TResult>(this StructuredDeferredTask<TSource, TDeferredSource1, TDeferredSource2> source, Func<TSource, TDeferredSource1, TDeferredSource2, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var impl = async () =>
@@ -295,16 +295,16 @@ public static class StructuredConcurrency
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var s = discard[0] ? default! : await source.Task;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d1 = discard[1] ? default! : await source.deferedTask1;
+            var d1 = discard[1] ? default! : await source.deferredTask1;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d2 = discard[2] ? default! : await source.deferedTask2;
+            var d2 = discard[2] ? default! : await source.deferredTask2;
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var f = func(s, d1, d2);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             return f;
         };
 
-        var sdt = new StructuredDeferedTask<TResult, TDeferedSource1, TDeferedSource2>(impl(), source.deferedTask1, source.deferedTask2, source.CancellationTokenSource);
+        var sdt = new StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2>(impl(), source.deferredTask1, source.deferredTask2, source.CancellationTokenSource);
         return sdt;
     }
 }
