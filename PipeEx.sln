@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PipeEx.StructuredConcurrenc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PipeEx.ConditionalExpressions", "PipeEx.ConditionalExpressions\PipeEx.ConditionalExpressions.csproj", "{73FE1AC7-FC65-45ED-813D-511F59F7878E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PipeEx.ResultChaining", "PipeEx.ResultChaining\PipeEx.ResultChaining.csproj", "{741B7F7F-0264-4C74-9C84-F0858560EBE1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{73FE1AC7-FC65-45ED-813D-511F59F7878E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73FE1AC7-FC65-45ED-813D-511F59F7878E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73FE1AC7-FC65-45ED-813D-511F59F7878E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{741B7F7F-0264-4C74-9C84-F0858560EBE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{741B7F7F-0264-4C74-9C84-F0858560EBE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{741B7F7F-0264-4C74-9C84-F0858560EBE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{741B7F7F-0264-4C74-9C84-F0858560EBE1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
