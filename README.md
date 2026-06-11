@@ -13,6 +13,7 @@ PipeEx is a lightweight C# library that enables fluent, pipe-like function chain
 - [Usage](#usage)
   - [Synchronous Operations](#synchronous-operations)
   - [Asynchronous Operations](#asynchronous-operations)
+  - [Conditional Expressions](#conditional-expressions)
   - [Result Chaining](#result-chaining)
 - [Planned Features](#planned-features)
 - [Contributing](#contributing)
@@ -21,6 +22,7 @@ PipeEx is a lightweight C# library that enables fluent, pipe-like function chain
 
 - **Fluent Syntax:** Create readable chains of function calls.
 - **Asynchronous Support:** Seamlessly chains both synchronous and asynchronous operations (`Task<T>`).
+- **Conditional Expressions:** Express if / else if / else logic, conditional side effects and guards as fluent expressions, synchronously or asynchronously.
 - **Result Chaining:** Railway oriented chaining of methods that can succeed or fail, without exceptions for control flow.
 - **Simplified Code:** Reduces nesting and complexity, making your code easier to maintain.
 - **Lightweight:** No dependencies without compromising on expressiveness.
@@ -43,6 +45,12 @@ For Result Chaining support, install:
 
 ```bash
 dotnet add package PipeEx.ResultChaining
+```
+
+For Conditional Expressions support, install:
+
+```bash
+dotnet add package PipeEx.ConditionalExpressions
 ```
 
 ## Usage
@@ -73,6 +81,47 @@ public Task<int> Calc(int x) => x.I(FuncXAsync)
                                  .I(x => x + 2)
                                  .I(FuncYAsync)
                                  .I(FuncY);
+```
+
+### Conditional Expressions
+
+`PipeEx.ConditionalExpressions` turns conditional logic into fluent expressions.
+
+`If()` conditionally transforms a value. Without an else branch the original value is returned; with one, both branches can produce a new type. Branches can be funcs, constant values or asynchronous:
+
+```csharp
+public int Calc(int x) => x.If(x => x <= 2, x => x + 2);                     // no else: returns x when false
+public int Calc(int x) => x.If(x => x <= 2, x => x + 2, x => x - 2);
+public string Calc(int x) => x.If(x => x <= 2, "Woohoo", "Noooo");           // constant values
+public Task<int> Calc(int x) => x.If(x => x <= 2, FuncXAsync);               // async transform
+```
+
+`Switch()` / `ElseIf()` / `Else()` form a lazily evaluated, value producing if / else if / else chain. The first matching branch wins, later predicates and transformations are not evaluated, and the chain is terminated by `Else`:
+
+```csharp
+public string Grade(int score) =>
+    score.Switch(s => s >= 90, "A")
+         .ElseIf(s => s >= 80, "B")
+         .ElseIf(s => s >= 70, _ => "C")
+         .Else("F");
+```
+
+`When()` conditionally executes a side effect and returns the source for further chaining. `Guard()` does the same but remembers whether the condition matched, so a chain of guards can be closed with an `Else()` that only runs when the previous condition was skipped:
+
+```csharp
+order.When(o => o.IsRush, o => logger.LogRush(o))
+     .Guard(o => o.IsValid, o => Submit(o))
+     .Else(o => Reject(o));
+```
+
+All of these compose with asynchronous pipes: every extension method also accepts a `Task<T>` source and asynchronous transformations or actions (`Func<T, Task>` / `Func<T, Task<TResult>>`), so conditionals can sit in the middle of an async chain:
+
+```csharp
+public Task<string> Categorize(int x) =>
+    LoadAsync(x).If(v => v.IsCached, v => v, EnrichAsync)
+                .Switch(v => v.Score >= 90, FetchPremiumLabelAsync)
+                .ElseIf(v => v.Score >= 50, "standard")
+                .Else("basic");
 ```
 
 ### Result Chaining
