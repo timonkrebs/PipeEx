@@ -13,6 +13,7 @@ PipeEx is a lightweight C# library that enables fluent, pipe-like function chain
 - [Usage](#usage)
   - [Synchronous Operations](#synchronous-operations)
   - [Asynchronous Operations](#asynchronous-operations)
+  - [Result Chaining](#result-chaining)
 - [Planned Features](#planned-features)
 - [Contributing](#contributing)
 
@@ -20,6 +21,7 @@ PipeEx is a lightweight C# library that enables fluent, pipe-like function chain
 
 - **Fluent Syntax:** Create readable chains of function calls.
 - **Asynchronous Support:** Seamlessly chains both synchronous and asynchronous operations (`Task<T>`).
+- **Result Chaining:** Railway oriented chaining of methods that can succeed or fail, without exceptions for control flow.
 - **Simplified Code:** Reduces nesting and complexity, making your code easier to maintain.
 - **Lightweight:** No dependencies without compromising on expressiveness.
 
@@ -35,6 +37,12 @@ For Structured Concurrency support, install:
 
 ```bash
 dotnet add package PipeEx.StructuredConcurrency
+```
+
+For Result Chaining support, install:
+
+```bash
+dotnet add package PipeEx.ResultChaining
 ```
 
 ## Usage
@@ -65,6 +73,62 @@ public Task<int> Calc(int x) => x.I(FuncXAsync)
                                  .I(x => x + 2)
                                  .I(FuncYAsync)
                                  .I(FuncY);
+```
+
+### Result Chaining
+
+`PipeEx.ResultChaining` brings fluent, railway oriented method chaining (inspired by [OneOf.Chaining](https://github.com/andrewjpoole/OneOf.Chaining)) without any dependencies. Methods that can succeed or fail simply return a `Result<TSuccess, TFailure>` (or a `Task` of it) and can then be chained. A failure short-circuits the rest of the chain.
+
+Turn this:
+
+```csharp
+public async Task<Result<WeatherReport, Failure>> Handle(string region, DateTime date)
+{
+    var isValidRequest = await regionValidator.Validate(region);
+    if (!isValidRequest)
+        return new UnsupportedRegionFailure();
+
+    var dateCheckPassed = await dateChecker.CheckDate(date);
+    if (!dateCheckPassed)
+        return new InvalidRequestFailure();
+
+    var report = WeatherReport.Create(region, date);
+    var cacheResult = await cache.TryPopulate(report);
+    if (cacheResult.PopulatedFromCache)
+        return cacheResult;
+
+    return await weatherForecastGenerator.Generate(cacheResult);
+}
+```
+
+into this:
+
+```csharp
+public async Task<Result<WeatherReport, Failure>> Handle(string region, DateTime date) =>
+    await WeatherReport.Create(region, date)
+        .Then(regionValidator.ValidateRegion)
+        .Then(dateChecker.CheckDate)
+        .Then(cache.TryPopulate)
+        .IfThen(report => report.PopulatedFromCache is false,
+            weatherForecastGenerator.Generate);
+```
+
+The package includes:
+
+- `Then()` which enables fluent chaining of any method that returns a `Result<TSuccess, TFailure>` or a `Task<Result<TSuccess, TFailure>>`. Synchronous and asynchronous jobs can be mixed freely.
+- An overload of `Then()` which takes an `onFailure` func, useful for tidying up previous work. It can also mutate the failure result (but not turn it into a success).
+- `IfThen()` which takes a condition func; the next job is only invoked when it returns true.
+- `ThenForEach()` which invokes a job once per item produced from the current success value, breaking on the first failure.
+- `ToResult()` which converts the success value at the end of a chain into a new type.
+- `ThenWaitForAll()` and `ThenWaitForFirst()` which execute jobs in parallel, with an optional result merging strategy.
+- Versions of all extension methods with cancellation support (`CancellationToken` is checked between links and passed into each job; `ThenWaitForFirst` signals cancellation to the remaining jobs once the first one completes).
+
+```csharp
+var result = await report.ToSuccess<WeatherReport, Failure>()
+    .Then(ValidateRegion)
+    .ThenWaitForAll(FetchTemperature, FetchWind, FetchHumidity)
+    .Then(PersistReport, onFailure: (report, failure) => Cleanup(report, failure))
+    .ToResult(report => new WeatherReportResponse(report));
 ```
 
 ## Planned Features
