@@ -36,6 +36,83 @@ public static class GuardExpressions
     }
 
     /// <summary>
+    /// Conditionally executes an asynchronous action on the source object based on a predicate, returning a ConditionalExecutionResult for chaining.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="source">The source object.</param>
+    /// <param name="predicate">A function that evaluates the source object and returns a boolean.</param>
+    /// <param name="action">The asynchronous action to execute if the predicate is true.</param>
+    /// <returns>A task containing a ConditionalExecutionResult wrapping the source object.</returns>
+    public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this TSource source, Func<TSource, bool> predicate, Func<TSource, Task> action)
+    {
+        if (!predicate(source)) return new ConditionalExecutionResult<TSource>(source, true);
+
+        await action(source);
+        return new ConditionalExecutionResult<TSource>(source);
+    }
+
+    /// <summary>
+    /// Awaits the source task and conditionally executes an action on the result based on a predicate, returning a ConditionalExecutionResult for chaining.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="source">The task producing the source object.</param>
+    /// <param name="predicate">A function that evaluates the source object and returns a boolean.</param>
+    /// <param name="action">The action to execute if the predicate is true.</param>
+    /// <returns>A task containing a ConditionalExecutionResult wrapping the awaited source object.</returns>
+    public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this Task<TSource> source, Func<TSource, bool> predicate, Action<TSource> action)
+        => (await source).Guard(predicate, action);
+
+    /// <summary>
+    /// Awaits the source task and conditionally executes an asynchronous action on the result based on a predicate, returning a ConditionalExecutionResult for chaining.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="source">The task producing the source object.</param>
+    /// <param name="predicate">A function that evaluates the source object and returns a boolean.</param>
+    /// <param name="action">The asynchronous action to execute if the predicate is true.</param>
+    /// <returns>A task containing a ConditionalExecutionResult wrapping the awaited source object.</returns>
+    public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this Task<TSource> source, Func<TSource, bool> predicate, Func<TSource, Task> action)
+        => await (await source).Guard(predicate, action);
+
+    /// <summary>
+    /// Conditionally executes an asynchronous action on the source object if the previous condition in the chain was not skipped.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="sourceResult">The ConditionalExecutionResult from the previous step.</param>
+    /// <param name="predicate">A function that evaluates the source object and returns a boolean.</param>
+    /// <param name="action">The asynchronous action to execute if the predicate is true and the previous condition was not skipped.</param>
+    /// <returns>A task containing the updated ConditionalExecutionResult.</returns>
+    public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this ConditionalExecutionResult<TSource> sourceResult, Func<TSource, bool> predicate, Func<TSource, Task> action)
+    {
+        if (sourceResult.Skip) return sourceResult; // Short-circuit: if already skipped, propagate the skipped status
+        if (!predicate(sourceResult.Value)) return new ConditionalExecutionResult<TSource>(sourceResult.Value, true);
+
+        await action(sourceResult.Value);
+        return sourceResult;
+    }
+
+    /// <summary>
+    /// Awaits the previous step and conditionally executes an action on the result if the previous condition in the chain was not skipped.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="sourceResult">The task producing the ConditionalExecutionResult from the previous step.</param>
+    /// <param name="predicate">A function that evaluates the source object and returns a boolean.</param>
+    /// <param name="action">The action to execute if the predicate is true and the previous condition was not skipped.</param>
+    /// <returns>A task containing the updated ConditionalExecutionResult.</returns>
+    public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this Task<ConditionalExecutionResult<TSource>> sourceResult, Func<TSource, bool> predicate, Action<TSource> action)
+        => (await sourceResult).Guard(predicate, action);
+
+    /// <summary>
+    /// Awaits the previous step and conditionally executes an asynchronous action on the result if the previous condition in the chain was not skipped.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="sourceResult">The task producing the ConditionalExecutionResult from the previous step.</param>
+    /// <param name="predicate">A function that evaluates the source object and returns a boolean.</param>
+    /// <param name="action">The asynchronous action to execute if the predicate is true and the previous condition was not skipped.</param>
+    /// <returns>A task containing the updated ConditionalExecutionResult.</returns>
+    public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this Task<ConditionalExecutionResult<TSource>> sourceResult, Func<TSource, bool> predicate, Func<TSource, Task> action)
+        => await (await sourceResult).Guard(predicate, action);
+
+    /// <summary>
     /// Executes an alternative action if the previous condition in the chain was skipped.
     /// </summary>
     /// <typeparam name="TSource">The type of the source object.</typeparam>
@@ -49,6 +126,41 @@ public static class GuardExpressions
         action(sourceResult.Value); // Execute the else action
         return sourceResult.Value; // After Else action, reset IsSkipped to false, as we've handled the 'else' case.
     }
+
+    /// <summary>
+    /// Executes an alternative asynchronous action if the previous condition in the chain was skipped.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="sourceResult">The ConditionalExecutionResult from the previous step.</param>
+    /// <param name="action">The asynchronous action to execute if the previous condition was skipped.</param>
+    /// <returns>A task containing the unwrapped source object.</returns>
+    public static async Task<TSource> Else<TSource>(this ConditionalExecutionResult<TSource> sourceResult, Func<TSource, Task> action)
+    {
+        if (!sourceResult.Skip) return sourceResult.Value;
+
+        await action(sourceResult.Value);
+        return sourceResult.Value;
+    }
+
+    /// <summary>
+    /// Awaits the previous step and executes an alternative action if the previous condition in the chain was skipped.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="sourceResult">The task producing the ConditionalExecutionResult from the previous step.</param>
+    /// <param name="action">The action to execute if the previous condition was skipped.</param>
+    /// <returns>A task containing the unwrapped source object.</returns>
+    public static async Task<TSource> Else<TSource>(this Task<ConditionalExecutionResult<TSource>> sourceResult, Action<TSource> action)
+        => (await sourceResult).Else(action);
+
+    /// <summary>
+    /// Awaits the previous step and executes an alternative asynchronous action if the previous condition in the chain was skipped.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <param name="sourceResult">The task producing the ConditionalExecutionResult from the previous step.</param>
+    /// <param name="action">The asynchronous action to execute if the previous condition was skipped.</param>
+    /// <returns>A task containing the unwrapped source object.</returns>
+    public static async Task<TSource> Else<TSource>(this Task<ConditionalExecutionResult<TSource>> sourceResult, Func<TSource, Task> action)
+        => await (await sourceResult).Else(action);
 }
 
 public class ConditionalExecutionResult<TSource>

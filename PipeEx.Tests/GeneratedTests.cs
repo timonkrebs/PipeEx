@@ -44,13 +44,13 @@ public class IfExpressionsTests
     [Fact]
     public Task Test_IfExpressions_If_PredicateTrue() =>
     Arrange(() => 10)
-    .Act(x => x.If(val => val > 5, val => val * 2))
+    .Act(x => x.If(val => val > 5, val => val * 2).Else(val => val))
     .Assert(result => Assert.Equal(20, result));
 
     [Fact]
     public Task Test_IfExpressions_If_PredicateFalse() =>
     Arrange(() => 3)
-    .Act(x => x.If(val => val > 5, val => val * 2))
+    .Act(x => x.If(val => val > 5, val => val * 2).Else(val => val))
     .Assert(result => Assert.Equal(3, result));
 
     [Fact]
