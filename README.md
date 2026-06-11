@@ -177,7 +177,6 @@ var result = await report.ToSuccess<WeatherReport, Failure>()
 
 ## Planned Features
 
-- **Structured Concurrency:** Declare asynchronous variables that are resolved at a later point.
 - **Cancellation:** Support for initializing and propagating cancellation tokens (e.g., StructuredTask<T>).
 - **Resource Management:** Enhanced handling for resources that are not thread-safe (like EF Core DbContext or WPF UI updates).
 
