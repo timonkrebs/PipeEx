@@ -87,20 +87,15 @@ public Task<int> Calc(int x) => x.I(FuncXAsync)
 
 `PipeEx.ConditionalExpressions` turns conditional logic into fluent expressions.
 
-`If()` conditionally transforms a value. Without an else branch the original value is returned; with one, both branches can produce a new type. Branches can be funcs, constant values or asynchronous:
+`If()` with both branches produces a value directly. With a single branch it starts a lazily evaluated if / else if / else chain, which is extended with any number of `ElseIf()` branches and terminated with `Else()`, which produces the final value. The first matching branch wins, later predicates and transformations are not evaluated. Branches can be funcs, constant values or asynchronous:
 
 ```csharp
-public int Calc(int x) => x.If(x => x <= 2, x => x + 2);                     // no else: returns x when false
 public int Calc(int x) => x.If(x => x <= 2, x => x + 2, x => x - 2);
-public string Calc(int x) => x.If(x => x <= 2, "Woohoo", "Noooo");           // constant values
-public Task<int> Calc(int x) => x.If(x => x <= 2, FuncXAsync);               // async transform
-```
+public string Calc(int x) => x.If(x => x <= 2, "Woohoo", "Noooo");              // constant values
+public Task<int> Calc(int x) => x.If(x => x <= 2, FuncXAsync).Else(x => x);     // async branch
 
-`Switch()` / `ElseIf()` / `Else()` form a lazily evaluated, value producing if / else if / else chain. The first matching branch wins, later predicates and transformations are not evaluated, and the chain is terminated by `Else`:
-
-```csharp
 public string Grade(int score) =>
-    score.Switch(s => s >= 90, "A")
+    score.If(s => s >= 90, "A")
          .ElseIf(s => s >= 80, "B")
          .ElseIf(s => s >= 70, _ => "C")
          .Else("F");
@@ -119,7 +114,7 @@ All of these compose with asynchronous pipes: every extension method also accept
 ```csharp
 public Task<string> Categorize(int x) =>
     LoadAsync(x).If(v => v.IsCached, v => v, EnrichAsync)
-                .Switch(v => v.Score >= 90, FetchPremiumLabelAsync)
+                .If(v => v.Score >= 90, FetchPremiumLabelAsync)
                 .ElseIf(v => v.Score >= 50, "standard")
                 .Else("basic");
 ```

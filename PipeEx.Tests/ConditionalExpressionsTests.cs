@@ -42,13 +42,13 @@ public class IfExpressionsAsyncTests
     [Fact]
     public Task Test_If_AsyncTransform_PredicateTrue() =>
     Arrange(() => 1)
-    .Act(async x => await x.If(val => val <= 2, AddTwoAsync))
+    .Act(async x => await x.If(val => val <= 2, AddTwoAsync).Else(val => val))
     .Assert(result => Assert.Equal(3, result));
 
     [Fact]
-    public Task Test_If_AsyncTransform_PredicateFalse_ReturnsSource() =>
+    public Task Test_If_AsyncTransform_PredicateFalse_ElseReturnsSource() =>
     Arrange(() => 5)
-    .Act(async x => await x.If(val => val <= 2, AddTwoAsync))
+    .Act(async x => await x.If(val => val <= 2, AddTwoAsync).Else(val => val))
     .Assert(result => Assert.Equal(5, result));
 
     [Fact]
@@ -56,7 +56,7 @@ public class IfExpressionsAsyncTests
     {
         var invoked = false;
         return Arrange(() => 5)
-        .Act(async x => await x.If(val => val <= 2, async val => { invoked = true; await Task.Yield(); return val; }))
+        .Act(async x => await x.If(val => val <= 2, async val => { invoked = true; await Task.Yield(); return val; }).Else(val => val))
         .Assert(_ => Assert.False(invoked));
     }
 
@@ -87,13 +87,13 @@ public class IfExpressionsAsyncTests
     [Fact]
     public Task Test_If_TaskSource_SyncTransform() =>
     Arrange(() => 1)
-    .Act(async x => await Task.FromResult(x).If(val => val <= 2, val => val + 2))
+    .Act(async x => await Task.FromResult(x).If(val => val <= 2, val => val + 2).Else(val => val))
     .Assert(result => Assert.Equal(3, result));
 
     [Fact]
     public Task Test_If_TaskSource_AsyncTransform() =>
     Arrange(() => 1)
-    .Act(async x => await Task.FromResult(x).If(val => val <= 2, AddTwoAsync))
+    .Act(async x => await Task.FromResult(x).If(val => val <= 2, AddTwoAsync).Else(val => val))
     .Assert(result => Assert.Equal(3, result));
 
     [Fact]
@@ -289,55 +289,55 @@ public class GuardExpressionsAsyncTests
     }
 }
 
-public class SwitchExpressionsTests
+public class IfChainTests
 {
     [Fact]
-    public Task Test_Switch_FirstBranchMatches() =>
+    public Task Test_IfChain_FirstBranchMatches() =>
     Arrange(() => 95)
-    .Act(x => x.Switch(s => s >= 90, "A")
+    .Act(x => x.If(s => s >= 90, "A")
                .ElseIf(s => s >= 80, "B")
                .Else("F"))
     .Assert(result => Assert.Equal("A", result));
 
     [Fact]
-    public Task Test_Switch_LaterBranchMatches() =>
+    public Task Test_IfChain_LaterBranchMatches() =>
     Arrange(() => 85)
-    .Act(x => x.Switch(s => s >= 90, "A")
+    .Act(x => x.If(s => s >= 90, "A")
                .ElseIf(s => s >= 80, "B")
                .Else("F"))
     .Assert(result => Assert.Equal("B", result));
 
     [Fact]
-    public Task Test_Switch_NoBranchMatches_ElseWins() =>
+    public Task Test_IfChain_NoBranchMatches_ElseWins() =>
     Arrange(() => 42)
-    .Act(x => x.Switch(s => s >= 90, "A")
+    .Act(x => x.If(s => s >= 90, "A")
                .ElseIf(s => s >= 80, "B")
                .Else("F"))
     .Assert(result => Assert.Equal("F", result));
 
     [Fact]
-    public Task Test_Switch_Transforms() =>
+    public Task Test_IfChain_Transforms() =>
     Arrange(() => 4)
-    .Act(x => x.Switch(s => s % 2 == 0, s => s * 10)
+    .Act(x => x.If(s => s % 2 == 0, s => s * 10)
                .ElseIf(s => s % 3 == 0, s => s * 100)
                .Else(s => s))
     .Assert(result => Assert.Equal(40, result));
 
     [Fact]
-    public Task Test_Switch_ElseTransform_ReceivesSource() =>
+    public Task Test_IfChain_ElseTransform_ReceivesSource() =>
     Arrange(() => 7)
-    .Act(x => x.Switch(s => s % 2 == 0, s => s * 10)
+    .Act(x => x.If(s => s % 2 == 0, s => s * 10)
                .ElseIf(s => s % 3 == 0, s => s * 100)
                .Else(s => s + 1))
     .Assert(result => Assert.Equal(8, result));
 
     [Fact]
-    public Task Test_Switch_FirstMatchWins_LaterPredicatesNotEvaluated()
+    public Task Test_IfChain_FirstMatchWins_LaterPredicatesNotEvaluated()
     {
         var laterPredicateEvaluated = false;
         var laterTransformEvaluated = false;
         return Arrange(() => 95)
-        .Act(x => x.Switch(s => s >= 90, "A")
+        .Act(x => x.If(s => s >= 90, "A")
                    .ElseIf(s => { laterPredicateEvaluated = true; return s >= 80; }, s => { laterTransformEvaluated = true; return "B"; })
                    .Else("F"))
         .Assert(result =>
@@ -349,11 +349,11 @@ public class SwitchExpressionsTests
     }
 
     [Fact]
-    public Task Test_Switch_NonMatchingTransformNotEvaluated()
+    public Task Test_IfChain_NonMatchingTransformNotEvaluated()
     {
         var firstTransformEvaluated = false;
         return Arrange(() => 85)
-        .Act(x => x.Switch(s => s >= 90, s => { firstTransformEvaluated = true; return "A"; })
+        .Act(x => x.If(s => s >= 90, s => { firstTransformEvaluated = true; return "A"; })
                    .ElseIf(s => s >= 80, "B")
                    .Else("F"))
         .Assert(result =>
@@ -364,7 +364,7 @@ public class SwitchExpressionsTests
     }
 }
 
-public class SwitchExpressionsAsyncTests
+public class IfChainAsyncTests
 {
     private static async Task<string> WordAsync(string word)
     {
@@ -373,51 +373,51 @@ public class SwitchExpressionsAsyncTests
     }
 
     [Fact]
-    public Task Test_Switch_AsyncTransform_Matches() =>
+    public Task Test_IfChain_AsyncTransform_Matches() =>
     Arrange(() => 95)
-    .Act(async x => await x.Switch(s => s >= 90, _ => WordAsync("A"))
+    .Act(async x => await x.If(s => s >= 90, _ => WordAsync("A"))
                            .ElseIf(s => s >= 80, _ => WordAsync("B"))
                            .Else(_ => WordAsync("F")))
     .Assert(result => Assert.Equal("A", result));
 
     [Fact]
-    public Task Test_Switch_AsyncElseIfBranch_Matches() =>
+    public Task Test_IfChain_AsyncElseIfBranch_Matches() =>
     Arrange(() => 85)
-    .Act(async x => await x.Switch(s => s >= 90, _ => WordAsync("A"))
+    .Act(async x => await x.If(s => s >= 90, _ => WordAsync("A"))
                            .ElseIf(s => s >= 80, _ => WordAsync("B"))
                            .Else(_ => WordAsync("F")))
     .Assert(result => Assert.Equal("B", result));
 
     [Fact]
-    public Task Test_Switch_AsyncElse_Wins() =>
+    public Task Test_IfChain_AsyncElse_Wins() =>
     Arrange(() => 42)
-    .Act(async x => await x.Switch(s => s >= 90, _ => WordAsync("A"))
+    .Act(async x => await x.If(s => s >= 90, _ => WordAsync("A"))
                            .ElseIf(s => s >= 80, _ => WordAsync("B"))
                            .Else(_ => WordAsync("F")))
     .Assert(result => Assert.Equal("F", result));
 
     [Fact]
-    public Task Test_Switch_TaskSource_SyncBranches() =>
+    public Task Test_IfChain_TaskSource_SyncBranches() =>
     Arrange(() => 85)
-    .Act(async x => await Task.FromResult(x).Switch(s => s >= 90, "A")
+    .Act(async x => await Task.FromResult(x).If(s => s >= 90, "A")
                                             .ElseIf(s => s >= 80, "B")
                                             .Else("F"))
     .Assert(result => Assert.Equal("B", result));
 
     [Fact]
-    public Task Test_Switch_TaskSource_MixedBranches() =>
+    public Task Test_IfChain_TaskSource_MixedBranches() =>
     Arrange(() => 42)
-    .Act(async x => await Task.FromResult(x).Switch(s => s >= 90, _ => WordAsync("A"))
+    .Act(async x => await Task.FromResult(x).If(s => s >= 90, _ => WordAsync("A"))
                                             .ElseIf(s => s >= 80, s => $"B{s}")
                                             .Else("F"))
     .Assert(result => Assert.Equal("F", result));
 
     [Fact]
-    public Task Test_Switch_AsyncBranch_OnlyMatchedBranchAwaited()
+    public Task Test_IfChain_AsyncBranch_OnlyMatchedBranchAwaited()
     {
         var unmatchedInvoked = false;
         return Arrange(() => 85)
-        .Act(async x => await x.Switch(s => s >= 90, async _ => { unmatchedInvoked = true; await Task.Yield(); return "A"; })
+        .Act(async x => await x.If(s => s >= 90, async _ => { unmatchedInvoked = true; await Task.Yield(); return "A"; })
                                .ElseIf(s => s >= 80, _ => WordAsync("B"))
                                .Else(_ => WordAsync("F")))
         .Assert(result =>
@@ -428,9 +428,9 @@ public class SwitchExpressionsAsyncTests
     }
 
     [Fact]
-    public Task Test_Switch_TaskChain_ElseValue_NotUsedWhenMatched() =>
+    public Task Test_IfChain_TaskChain_ElseValue_NotUsedWhenMatched() =>
     Arrange(() => 95)
-    .Act(async x => await Task.FromResult(x).Switch(s => s >= 90, _ => WordAsync("A"))
+    .Act(async x => await Task.FromResult(x).If(s => s >= 90, _ => WordAsync("A"))
                                             .ElseIf(s => s >= 80, "B")
                                             .Else("F"))
     .Assert(result => Assert.Equal("A", result));
