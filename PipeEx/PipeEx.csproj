@@ -27,5 +27,13 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.300" PrivateAssets="All" />
   </ItemGroup>
 
+  <!-- Source generator that emits the TupleDestructuring class at compile time. -->
+  <ItemGroup>
+    <ProjectReference Include="..\PipeEx.SourceGenerators\PipeEx.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
 
 </Project>

@@ -1,76 +1,124 @@
-#!/bin/bash
-fileName="PipeEx.StructuredConcurrency/StructuredConcurrency.TupleDestructuring.g.cs"
-echo "Started generating $fileName"
-cat << EOF > $fileName
-namespace PipeEx.StructuredConcurrency;
+using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
-public static class TupleDestructuring
+namespace PipeEx.SourceGenerators;
+
+/// <summary>
+/// Generates the <c>PipeEx.StructuredConcurrency.TupleDestructuring</c> class. For every
+/// tuple arity from <see cref="TupleArity.Min"/> to <see cref="TupleArity.Max"/> it emits
+/// the full set of <c>I</c> overloads that bridge tuple sources (plain, <c>Task</c> and
+/// <c>StructuredTask</c>) with synchronous, <c>Task</c> and <c>StructuredTask</c> transforms.
+/// </summary>
+/// <remarks>
+/// Replaces the former <c>PipeEx.StructuredConcurrency/StructuredConcurrency.TupleDestructuring.sh</c> shell script.
+/// </remarks>
+[Generator(LanguageNames.CSharp)]
+public sealed class StructuredConcurrencyTupleDestructuringGenerator : IIncrementalGenerator
 {
-EOF
-for item in $(seq 1 12); do
-    ty="TSource1"
-    tv="source.Item1"
+    /// <summary>The generators are shipped in one shared assembly, so each one only emits into its target assembly.</summary>
+    private const string TargetAssembly = "PipeEx.StructuredConcurrency";
 
-    for i in $(seq 1 $item); do
-        ty="${ty}, TSource$((i + 1))"
-        tv="${tv}, source.Item$((i + 1))"
-    done
+    private const string HintName = "StructuredConcurrency.TupleDestructuring.g.cs";
 
-cat << EOF >> $fileName
-
-    public static async StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, Task<TResult>> func)
+    public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        return await func($tv);
+        var assemblyName = context.CompilationProvider.Select(static (compilation, _) => compilation.AssemblyName);
+
+        context.RegisterSourceOutput(assemblyName, static (productionContext, name) =>
+        {
+            if (name != TargetAssembly)
+            {
+                return;
+            }
+
+            productionContext.AddSource(HintName, SourceText.From(Build(), Encoding.UTF8));
+        });
     }
 
-    public static StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, StructuredTask<TResult>> func)
+    private static string Build()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("using System;");
+        sb.AppendLine("using System.Threading;");
+        sb.AppendLine("using System.Threading.Tasks;");
+        sb.AppendLine();
+        sb.AppendLine("namespace PipeEx.StructuredConcurrency;");
+        sb.AppendLine();
+        sb.AppendLine("public static class TupleDestructuring");
+        sb.AppendLine("{");
+
+        for (var arity = TupleArity.Min; arity <= TupleArity.Max; arity++)
+        {
+            sb.Append(OverloadsTemplate
+                .Replace("$ty$", TupleArity.TypeList(arity))
+                .Replace("$tv$", TupleArity.ValueList(arity)));
+        }
+
+        sb.AppendLine("}");
+        return sb.ToString();
+    }
+
+    // The full set of overloads emitted for a single tuple arity. The leading and trailing
+    // blank lines keep one blank line between consecutive arities and before the closing
+    // brace of the class. The closing delimiter sits in column 0 so the template is copied
+    // verbatim (no raw-string indentation is stripped).
+    private const string OverloadsTemplate =
+"""
+
+    public static async StructuredTask<TResult> I<$ty$, TResult>(this ($ty$) source, Func<$ty$, Task<TResult>> func)
+    {
+        return await func($tv$);
+    }
+
+    public static StructuredTask<TResult> I<$ty$, TResult>(this ($ty$) source, Func<$ty$, StructuredTask<TResult>> func)
     {
         // This works because the structuredTask is assigned befor the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
-            structuredTask = func($tv);
+            structuredTask = func($tv$);
             return await structuredTask;
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
     }
 
-    public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
+    public static async StructuredTask<TResult> I<$ty$, TResult>(this Task<($ty$)> s, Func<$ty$, TResult> func)
     {
         var source = await s;
-        return func($tv);
+        return func($tv$);
     }
 
-    public static StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, TResult> func)
+    public static StructuredTask<TResult> I<$ty$, TResult>(this StructuredTask<($ty$)> s, Func<$ty$, TResult> func)
     {
         var impl = async () =>
         {
             var source = await s;
-            return func($tv);
+            return func($tv$);
         };
 
         return new StructuredTask<TResult>(impl(), s);
     }
 
-    public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, Task<TResult>> func)
+    public static async StructuredTask<TResult> I<$ty$, TResult>(this Task<($ty$)> s, Func<$ty$, Task<TResult>> func)
     {
         var source = await s;
-        return await func($tv);
+        return await func($tv$);
     }
 
-    public static StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, Task<TResult>> func)
+    public static StructuredTask<TResult> I<$ty$, TResult>(this StructuredTask<($ty$)> s, Func<$ty$, Task<TResult>> func)
     {
         var impl = async () =>
         {
             var source = await s;
-            return await func($tv);
+            return await func($tv$);
         };
 
         return new StructuredTask<TResult>(impl(), s);
     }
 
-     public static StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
+    public static StructuredTask<TResult> I<$ty$, TResult>(this Task<($ty$)> s, Func<$ty$, StructuredTask<TResult>> func)
     {
         var cts = new CancellationTokenSource();
         var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -79,7 +127,7 @@ cat << EOF >> $fileName
         {
             try
             {
-                ($ty) source;
+                ($ty$) source;
                 try
                 {
                     source = await s;
@@ -97,7 +145,7 @@ cat << EOF >> $fileName
                     return;
                 }
 
-                var innerStructuredTask = func($tv);
+                var innerStructuredTask = func($tv$);
 
                 try
                 {
@@ -125,7 +173,7 @@ cat << EOF >> $fileName
         return new StructuredTask<TResult>(tcs.Task, cts);
     }
 
-    public static StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
+    public static StructuredTask<TResult> I<$ty$, TResult>(this StructuredTask<($ty$)> s, Func<$ty$, StructuredTask<TResult>> func)
     {
         var cts = CancellationTokenSource.CreateLinkedTokenSource(s.CancellationTokenSource.Token);
         var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -134,7 +182,7 @@ cat << EOF >> $fileName
         {
             try
             {
-                ($ty) source;
+                ($ty$) source;
                 try
                 {
                     source = await s;
@@ -152,7 +200,7 @@ cat << EOF >> $fileName
                     return;
                 }
 
-                var innerStructuredTask = func($tv);
+                var innerStructuredTask = func($tv$);
 
                 try
                 {
@@ -179,10 +227,6 @@ cat << EOF >> $fileName
 
         return new StructuredTask<TResult>(tcs.Task, cts);
     }
-EOF
 
-done
-cat << EOF >> $fileName
+""";
 }
-EOF
-echo "Successfully generated $fileName"
