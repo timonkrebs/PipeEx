@@ -73,7 +73,7 @@ public sealed class StructuredConcurrencyTupleDestructuringGenerator : IIncremen
 
     public static StructuredTask<TResult> I<$ty$, TResult>(this ($ty$) source, Func<$ty$, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {

@@ -19,8 +19,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- PrivateAssets="all" keeps Roslyn out of the consuming projects' dependency graph. -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <!-- PrivateAssets="All" keeps Roslyn out of the consuming projects' dependency graph. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>

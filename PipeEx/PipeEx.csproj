@@ -32,7 +32,7 @@
     <ProjectReference Include="..\PipeEx.SourceGenerators\PipeEx.SourceGenerators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"
-                      PrivateAssets="all" />
+                      PrivateAssets="All" />
   </ItemGroup>
 
 
