@@ -152,4 +152,14 @@ public class StructuredConcurrencyTests
 
     private static StructuredTask<int> StructuredThrow(int v) =>
         v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
+
+    // Result propagation through the generated ((TSource1, TSource2), Func<.., StructuredTask<TResult>>)
+    // overload. A method group binds to the StructuredTask overload rather than the Task one.
+    [Fact]
+    public Task Test11_TupleValueToStructuredTaskFunc_PropagatesResult() =>
+        Arrange(() => (2, 3))
+        .Act(x => x.I(StructuredSum))
+        .Assert(async structuredTask => Assert.Equal(5, await structuredTask));
+
+    private static StructuredTask<int> StructuredSum(int a, int b) => (a + b).I<int, int>(w => Task.FromResult(w));
 }
