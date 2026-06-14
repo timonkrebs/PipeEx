@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 
 namespace PipeEx.StructuredConcurrency;
 
@@ -263,7 +262,15 @@ public static class StructuredConcurrency
     }
 
 
-    public static StructuredDeferredTask<TResult, TDeferredSource> Await<TSource, TDeferredSource, TResult>(this StructuredDeferredTask<TSource, TDeferredSource> source, Func<TSource, TDeferredSource, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
+    /// <summary>
+    /// Awaits the source and the deferred result and projects them with <paramref name="func"/>.
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <typeparam name="TDeferredSource">The type of the deferred result.</typeparam>
+    /// <typeparam name="TResult">The type produced by the projection.</typeparam>
+    /// <param name="source">The deferred task carrying the source and the deferred result.</param>
+    /// <param name="func">The projection applied to the source and the deferred result.</param>
+    public static StructuredDeferredTask<TResult, TDeferredSource> Await<TSource, TDeferredSource, TResult>(this StructuredDeferredTask<TSource, TDeferredSource> source, Func<TSource, TDeferredSource, TResult> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var impl = async () =>
@@ -282,22 +289,29 @@ public static class StructuredConcurrency
         return sdt;
     }
 
+    /// <summary>
+    /// Awaits the source and both deferred results and projects them with <paramref name="func"/>.
+    /// Every deferred result is awaited so that all of their exceptions are observed; the projection
+    /// is free to ignore any argument it does not need (e.g. by using a discard parameter).
+    /// </summary>
+    /// <typeparam name="TSource">The type of the source object.</typeparam>
+    /// <typeparam name="TDeferredSource1">The type of the first deferred result.</typeparam>
+    /// <typeparam name="TDeferredSource2">The type of the second deferred result.</typeparam>
+    /// <typeparam name="TResult">The type produced by the projection.</typeparam>
+    /// <param name="source">The deferred task carrying the source and the two deferred results.</param>
+    /// <param name="func">The projection applied to the source and the two deferred results.</param>
     [OverloadResolutionPriority(1)]
-    public static StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2> Await<TSource, TDeferredSource1, TDeferredSource2, TResult>(this StructuredDeferredTask<TSource, TDeferredSource1, TDeferredSource2> source, Func<TSource, TDeferredSource1, TDeferredSource2, TResult> func, [CallerArgumentExpression("func")] string propertyName = "")
+    public static StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2> Await<TSource, TDeferredSource1, TDeferredSource2, TResult>(this StructuredDeferredTask<TSource, TDeferredSource1, TDeferredSource2> source, Func<TSource, TDeferredSource1, TDeferredSource2, TResult> func)
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var impl = async () =>
         {
-            Regex regex = new Regex(@"\(([^)]*)\)");
-            Match match = regex.Match(propertyName);
-            var discard = Regex.Split(match.Groups[1].Value, @",\s*").Select(x => x.Trim().StartsWith("_")).ToArray();
-
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = discard[0] ? default! : await source.Task;
+            var s = await source.Task.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d1 = discard[1] ? default! : await source.deferredTask1;
+            var d1 = await source.deferredTask1.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d2 = discard[2] ? default! : await source.deferredTask2;
+            var d2 = await source.deferredTask2.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var f = func(s, d1, d2);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
