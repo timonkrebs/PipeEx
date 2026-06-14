@@ -10,7 +10,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TResult>(this (TSource1, TSource2) source, Func<TSource1, TSource2, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -172,7 +172,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this (TSource1, TSource2, TSource3) source, Func<TSource1, TSource2, TSource3, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -334,7 +334,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this (TSource1, TSource2, TSource3, TSource4) source, Func<TSource1, TSource2, TSource3, TSource4, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -496,7 +496,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -658,7 +658,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -820,7 +820,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -982,7 +982,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -1144,7 +1144,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -1306,7 +1306,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -1468,7 +1468,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -1630,7 +1630,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
@@ -1792,7 +1792,7 @@ public static class TupleDestructuring
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned befor the await is hit.
+        // This works because the structuredTask is assigned before the await is hit.
         StructuredTask<TResult> structuredTask = default!;
         var impl = async () =>
         {
