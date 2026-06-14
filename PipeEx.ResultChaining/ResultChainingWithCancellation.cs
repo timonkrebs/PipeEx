@@ -300,8 +300,10 @@ public static class ResultChainingWithCancellation
 
         var currentSuccess = successOrFailure.SuccessValue;
         var runningTasks = tasks.Select(task => task(currentSuccess, remainingTasksCanceller.Token)).ToList();
-        var result = await (await Task.WhenAny(runningTasks).ConfigureAwait(false)).ConfigureAwait(false);
+        var winner = await Task.WhenAny(runningTasks).ConfigureAwait(false);
 
+        // Signal cancellation to the losing jobs as soon as the first job completes, even if the
+        // winning job faulted or cancelled (awaiting it below may throw before we would otherwise reach this).
         remainingTasksCanceller.Cancel();
 
         // The linked source must outlive the remaining jobs, dispose it (and observe their exceptions) once they have finished.
@@ -311,6 +313,6 @@ public static class ResultChainingWithCancellation
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
 
-        return result;
+        return await winner.ConfigureAwait(false);
     }
 }
