@@ -12,15 +12,7 @@ public static class StructuredConcurrency
 
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, StructuredTask<TResult>> func)
     {
-        StructuredTask<TResult> structuredTask = default!;
-        var impl = async () =>
-        {
-            structuredTask = func(source);
-            return await structuredTask.ConfigureAwait(false);
-        };
-
-        impl();
-        return structuredTask;
+        return func(source);
     }
 
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, TResult> func)
