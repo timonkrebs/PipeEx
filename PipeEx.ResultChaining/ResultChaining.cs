@@ -457,16 +457,17 @@ public static class ResultChaining
 
         var currentSuccess = successOrFailure.SuccessValue;
         var runningTasks = tasks.Select(task => task(currentSuccess)).ToList();
-        var result = await (await Task.WhenAny(runningTasks).ConfigureAwait(false)).ConfigureAwait(false);
+        var winner = await Task.WhenAny(runningTasks).ConfigureAwait(false);
 
         // The losing jobs keep running; observe their exceptions once they finish so they do not
-        // surface as an UnobservedTaskException.
+        // surface as an UnobservedTaskException. This must be wired up before awaiting the winner,
+        // otherwise a faulting winner would throw here and skip the observation.
         _ = Task.WhenAll(runningTasks).ContinueWith(
             t => { _ = t.Exception; },
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
 
-        return result;
+        return await winner.ConfigureAwait(false);
     }
 }

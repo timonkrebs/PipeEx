@@ -292,6 +292,27 @@ public class ResultChainingTests
         .Assert(r => Assert.Equal(2, r.SuccessValue));
 
     [Fact]
+    public async Task ThenWaitForFirst_PropagatesTheWinnerFaultWhenALoserAlsoFaults()
+    {
+        // The winning job faults immediately, so awaiting it throws. A losing job faults shortly after;
+        // its exception must still be observed (the observation continuation is wired before awaiting the
+        // winner), so the losing fault never surfaces as an UnobservedTaskException.
+        var loserFaulted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            StartWith(1).ThenWaitForFirst(
+                v => Task.FromException<Result<int, string>>(new InvalidOperationException("winner boom")),
+                async v =>
+                {
+                    try { await Task.Delay(50); throw new InvalidOperationException("loser boom"); }
+                    finally { loserFaulted.TrySetResult(true); }
+                }));
+
+        Assert.Equal("winner boom", ex.Message);
+        Assert.True(await loserFaulted.Task.WaitAsync(TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
     public async Task Then_WithCancellation_ThrowsWhenAlreadyCancelled()
     {
         using var cts = new CancellationTokenSource();
