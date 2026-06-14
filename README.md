@@ -15,6 +15,7 @@ PipeEx is a lightweight C# library that enables fluent, pipe-like function chain
   - [Asynchronous Operations](#asynchronous-operations)
   - [Conditional Expressions](#conditional-expressions)
   - [Result Chaining](#result-chaining)
+  - [Structured Concurrency](#structured-concurrency)
 - [Planned Features](#planned-features)
 - [Contributing](#contributing)
 
@@ -24,6 +25,7 @@ PipeEx is a lightweight C# library that enables fluent, pipe-like function chain
 - **Asynchronous Support:** Seamlessly chains both synchronous and asynchronous operations (`Task<T>`).
 - **Conditional Expressions:** Express if / else if / else logic, conditional side effects and guards as fluent expressions, synchronously or asynchronously.
 - **Result Chaining:** Railway oriented chaining of methods that can succeed or fail, without exceptions for control flow.
+- **Structured Concurrency:** Run asynchronous steps concurrently with `Let` / `Await` and carry a cancellation token along the pipe.
 - **Simplified Code:** Reduces nesting and complexity, making your code easier to maintain.
 - **Lightweight:** No dependencies without compromising on expressiveness.
 
@@ -175,9 +177,55 @@ var result = await report.ToSuccess<WeatherReport, Failure>()
     .ToResult(report => new WeatherReportResponse(report));
 ```
 
+### Structured Concurrency
+
+`PipeEx.StructuredConcurrency` extends the `I` pipe so asynchronous steps flow through a
+`StructuredTask<T>` that carries a `CancellationTokenSource` along the chain. Awaiting the chain
+works just like awaiting a `Task<T>`:
+
+```csharp
+// awaiting is handled automatically, just like the core async pipe
+public Task<int> Calc(int x) => x.I(FuncXAsync)
+                                 .I(x => x + 2)
+                                 .I(FuncYAsync);
+```
+
+Keep the `StructuredTask<T>` instead of awaiting it immediately and you can cancel the whole
+pipeline from the outside through its `CancellationTokenSource`:
+
+```csharp
+StructuredTask<int> task = x.I(FuncXAsync).I(FuncYAsync);
+task.CancellationTokenSource.Cancel();   // observed between pipeline stages
+```
+
+#### Concurrent async-let with `Let` / `Await`
+
+`Let` starts an additional asynchronous computation that runs concurrently with the source, and
+`Await` joins them back together once you need the results (inspired by Swift's `async let`):
+
+```csharp
+public Task<int> Combine(int x) =>
+    x.Let(() => LoadAAsync(x))    // started immediately, runs concurrently
+     .Let(() => LoadBAsync(x))    // also started immediately
+     .Await((source, a, b) => source + a + b);
+```
+
+`Await` awaits the source and every deferred result, so all of their exceptions are observed. The
+projection is free to ignore any argument it does not need:
+
+```csharp
+x.Let(() => LoadAAsync(x))
+ .Let(() => LoadBAsync(x))
+ .Await((source, _, b) => source + b);   // LoadAAsync's result is awaited but not used here
+```
+
+> This package is pre-release. Cancellation is observed between pipeline stages rather than
+> interrupting work already in flight, and a chain holds a `CancellationTokenSource`; dispose the
+> final `StructuredTask<T>` (for example with `using`) when you need deterministic cleanup.
+
 ## Planned Features
 
-- **Cancellation:** Support for initializing and propagating cancellation tokens (e.g., StructuredTask<T>).
+- **Deeper cancellation:** `PipeEx.StructuredConcurrency` already carries a `CancellationTokenSource` along a pipe and observes it between stages; interrupting work already in flight is planned.
 - **Resource Management:** Enhanced handling for resources that are not thread-safe (like EF Core DbContext or WPF UI updates).
 
 ## Contributing
