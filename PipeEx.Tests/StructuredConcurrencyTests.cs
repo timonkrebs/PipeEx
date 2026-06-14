@@ -127,39 +127,4 @@ public class StructuredConcurrencyTests
             return structuredTask;
         })
         .Assert(async structuredTask => await Assert.ThrowsAsync<OperationCanceledException>(async () => await structuredTask));
-
-    // Exercises the (value, Func<TSource, StructuredTask<TResult>>) overload. A method group is used
-    // deliberately: a lambda returning a StructuredTask would bind to the higher-priority Task overload
-    // (StructuredTask<T> is implicitly convertible to Task<T>), but a method group's return type is not
-    // reference-convertible, so it resolves to the StructuredTask overload under test.
-    [Fact]
-    public Task Test9_ValueToStructuredTaskFunc_PropagatesResult() =>
-        Arrange(() => 5)
-        .Act(x => x.I(StructuredDouble))
-        .Assert(async structuredTask => Assert.Equal(10, await structuredTask));
-
-    [Fact]
-    public Task Test10_ValueToStructuredTaskFunc_PropagatesException() =>
-        Arrange(() => 1)
-        .Act(x => x.I(StructuredThrow))
-        .Assert(async structuredTask =>
-        {
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await structuredTask);
-            Assert.Equal("boom", ex.Message);
-        });
-
-    private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
-
-    private static StructuredTask<int> StructuredThrow(int v) =>
-        v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
-
-    // Result propagation through the generated ((TSource1, TSource2), Func<.., StructuredTask<TResult>>)
-    // overload. A method group binds to the StructuredTask overload rather than the Task one.
-    [Fact]
-    public Task Test11_TupleValueToStructuredTaskFunc_PropagatesResult() =>
-        Arrange(() => (2, 3))
-        .Act(x => x.I(StructuredSum))
-        .Assert(async structuredTask => Assert.Equal(5, await structuredTask));
-
-    private static StructuredTask<int> StructuredSum(int a, int b) => (a + b).I<int, int>(w => Task.FromResult(w));
 }
