@@ -284,6 +284,14 @@ public class ResultChainingTests
         });
 
     [Fact]
+    public Task ThenWaitForFirst_ReturnsWinnerEvenWhenALaterJobFaults() => Arrange(() => 1)
+        .Act(x => StartWith(x)
+            .ThenWaitForFirst(
+                v => Task.FromResult(Result<int, string>.Success(v + 1)),
+                async v => { await Task.Delay(50); throw new InvalidOperationException("late boom"); }))
+        .Assert(r => Assert.Equal(2, r.SuccessValue));
+
+    [Fact]
     public async Task Then_WithCancellation_ThrowsWhenAlreadyCancelled()
     {
         using var cts = new CancellationTokenSource();

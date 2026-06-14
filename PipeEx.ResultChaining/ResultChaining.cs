@@ -434,6 +434,9 @@ public static class ResultChaining
     /// Chains an array of jobs which will be executed in parallel. This method will return immediately once the first job has completed.
     /// The result of the <paramref name="source"/> Task is evaluated and if it contains a failure, that failure is immediately returned.
     /// The result of the first completed job will be returned. The other job's results are ignored.
+    /// The remaining jobs are not cancelled (the jobs in this overload accept no cancellation token) and keep running to
+    /// completion; their exceptions are observed so they do not surface as an unobserved task exception. Use the cancellation
+    /// overload in <see cref="ResultChainingWithCancellation"/> to signal cancellation to the losing jobs.
     /// Please note, the success value is passed into each job by ref, so care must be taken around any mutation of any state on it.
     /// </summary>
     /// <typeparam name="TSuccess">Represents success, also likely contains any required state/results for processing in the chain.</typeparam>
@@ -453,6 +456,17 @@ public static class ResultChaining
             return successOrFailure;
 
         var currentSuccess = successOrFailure.SuccessValue;
-        return await (await Task.WhenAny(tasks.Select(task => task(currentSuccess))).ConfigureAwait(false)).ConfigureAwait(false);
+        var runningTasks = tasks.Select(task => task(currentSuccess)).ToList();
+        var result = await (await Task.WhenAny(runningTasks).ConfigureAwait(false)).ConfigureAwait(false);
+
+        // The losing jobs keep running; observe their exceptions once they finish so they do not
+        // surface as an UnobservedTaskException.
+        _ = Task.WhenAll(runningTasks).ContinueWith(
+            t => { _ = t.Exception; },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+        return result;
     }
 }
