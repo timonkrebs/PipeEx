@@ -24,14 +24,14 @@ public static class ResultChainingWithCancellation
         Func<TSuccess, CancellationToken, Task<Result<TSuccess, TFailure>>> nextJob,
         CancellationToken ct, bool throwOnCancellation = true)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
         if (throwOnCancellation)
             ct.ThrowIfCancellationRequested();
 
-        return await nextJob(successOrFailure.SuccessValue, ct);
+        return await nextJob(successOrFailure.SuccessValue, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public static class ResultChainingWithCancellation
         Func<TSuccess, TFailure, CancellationToken, Task<Result<TSuccess, TFailure>>> onFailure,
         CancellationToken ct, bool throwOnCancellation = true)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -64,12 +64,12 @@ public static class ResultChainingWithCancellation
             ct.ThrowIfCancellationRequested();
 
         var currentSuccess = successOrFailure.SuccessValue;
-        var result = await nextJob(currentSuccess, ct);
+        var result = await nextJob(currentSuccess, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
             return result;
 
-        var finalFailure = await onFailure(currentSuccess, result.FailureValue, ct);
+        var finalFailure = await onFailure(currentSuccess, result.FailureValue, ct).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : result.FailureValue;
     }
@@ -98,7 +98,7 @@ public static class ResultChainingWithCancellation
         CancellationToken ct, bool throwOnCancellation = true,
         Func<TSuccess, TFailure, CancellationToken, Task<Result<TSuccess, TFailure>>>? onFailure = null)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -109,7 +109,7 @@ public static class ResultChainingWithCancellation
         if (condition(currentSuccess, ct) is false)
             return successOrFailure;
 
-        var result = await nextJob(currentSuccess, ct);
+        var result = await nextJob(currentSuccess, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
             return result;
@@ -117,7 +117,7 @@ public static class ResultChainingWithCancellation
         if (onFailure is null)
             return result;
 
-        var finalFailure = await onFailure(currentSuccess, result.FailureValue, ct);
+        var finalFailure = await onFailure(currentSuccess, result.FailureValue, ct).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : result.FailureValue;
     }
@@ -145,7 +145,7 @@ public static class ResultChainingWithCancellation
         CancellationToken ct, bool throwOnCancellation = true,
         Func<TSuccess, TFailure, CancellationToken, Task<Result<TSuccess, TFailure>>>? onFailure = null)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -158,7 +158,7 @@ public static class ResultChainingWithCancellation
             if (throwOnCancellation)
                 ct.ThrowIfCancellationRequested();
 
-            itemResult = await taskForEachItem(itemResult.SuccessValue, item, ct);
+            itemResult = await taskForEachItem(itemResult.SuccessValue, item, ct).ConfigureAwait(false);
 
             if (itemResult.IsFailure)
                 break;
@@ -170,7 +170,7 @@ public static class ResultChainingWithCancellation
         if (onFailure is null)
             return itemResult;
 
-        var finalFailure = await onFailure(currentSuccess, itemResult.FailureValue, ct);
+        var finalFailure = await onFailure(currentSuccess, itemResult.FailureValue, ct).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : itemResult.FailureValue;
     }
@@ -192,7 +192,7 @@ public static class ResultChainingWithCancellation
         Func<TSuccess, TResult> convertToResult,
         CancellationToken ct, bool throwOnCancellation = true)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure.FailureValue;
 
@@ -224,7 +224,7 @@ public static class ResultChainingWithCancellation
         CancellationToken ct, bool throwOnCancellation = true,
         params Func<TSuccess, CancellationToken, Task<Result<TSuccess, TFailure>>>[] tasks)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -235,7 +235,7 @@ public static class ResultChainingWithCancellation
             return successOrFailure;
 
         var currentSuccess = successOrFailure.SuccessValue;
-        var taskResults = await Task.WhenAll(tasks.Select(task => task(currentSuccess, ct)));
+        var taskResults = await Task.WhenAll(tasks.Select(task => task(currentSuccess, ct))).ConfigureAwait(false);
 
         return resultMergingStrategy(currentSuccess, ct, taskResults.ToList());
     }
@@ -265,7 +265,7 @@ public static class ResultChainingWithCancellation
             return results.Any(x => x.IsFailure) ? results.First(x => x.IsFailure) : input;
         }
 
-        return await source.ThenWaitForAll(DefaultResultMergingStrategy, ct, throwOnCancellation, tasks);
+        return await source.ThenWaitForAll(DefaultResultMergingStrategy, ct, throwOnCancellation, tasks).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -286,7 +286,7 @@ public static class ResultChainingWithCancellation
         CancellationToken ct, bool throwOnCancellation = true,
         params Func<TSuccess, CancellationToken, Task<Result<TSuccess, TFailure>>>[] tasks)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -300,8 +300,10 @@ public static class ResultChainingWithCancellation
 
         var currentSuccess = successOrFailure.SuccessValue;
         var runningTasks = tasks.Select(task => task(currentSuccess, remainingTasksCanceller.Token)).ToList();
-        var result = await await Task.WhenAny(runningTasks);
+        var winner = await Task.WhenAny(runningTasks).ConfigureAwait(false);
 
+        // Signal cancellation to the losing jobs as soon as the first job completes, even if the
+        // winning job faulted or cancelled (awaiting it below may throw before we would otherwise reach this).
         remainingTasksCanceller.Cancel();
 
         // The linked source must outlive the remaining jobs, dispose it (and observe their exceptions) once they have finished.
@@ -311,6 +313,6 @@ public static class ResultChainingWithCancellation
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
 
-        return result;
+        return await winner.ConfigureAwait(false);
     }
 }

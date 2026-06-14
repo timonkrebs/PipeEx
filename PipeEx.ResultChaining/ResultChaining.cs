@@ -134,7 +134,7 @@ public static class ResultChaining
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, Result<TSuccess, TFailure>> nextJob)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -160,7 +160,7 @@ public static class ResultChaining
         Func<TSuccess, Result<TSuccess, TFailure>> nextJob,
         Func<TSuccess, TFailure, Result<TSuccess, TFailure>> onFailure)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         return successOrFailure.Then(nextJob, onFailure);
     }
 
@@ -178,11 +178,11 @@ public static class ResultChaining
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
-        return await nextJob(successOrFailure.SuccessValue);
+        return await nextJob(successOrFailure.SuccessValue).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -204,17 +204,17 @@ public static class ResultChaining
         Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob,
         Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>> onFailure)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
         var currentSuccess = successOrFailure.SuccessValue;
-        var result = await nextJob(currentSuccess);
+        var result = await nextJob(currentSuccess).ConfigureAwait(false);
 
         if (result.IsSuccess)
             return result;
 
-        var finalFailure = await onFailure(currentSuccess, result.FailureValue);
+        var finalFailure = await onFailure(currentSuccess, result.FailureValue).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : result.FailureValue;
     }
@@ -270,7 +270,7 @@ public static class ResultChaining
         Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob,
         Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>>? onFailure = null)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -278,7 +278,7 @@ public static class ResultChaining
         if (condition(currentSuccess) is false)
             return successOrFailure;
 
-        var result = await nextJob(currentSuccess);
+        var result = await nextJob(currentSuccess).ConfigureAwait(false);
 
         if (result.IsSuccess)
             return result;
@@ -286,7 +286,7 @@ public static class ResultChaining
         if (onFailure is null)
             return result;
 
-        var finalFailure = await onFailure(currentSuccess, result.FailureValue);
+        var finalFailure = await onFailure(currentSuccess, result.FailureValue).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : result.FailureValue;
     }
@@ -311,7 +311,7 @@ public static class ResultChaining
         Func<TSuccess, TItem, Task<Result<TSuccess, TFailure>>> taskForEachItem,
         Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>>? onFailure = null)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -321,7 +321,7 @@ public static class ResultChaining
         var itemResult = successOrFailure;
         foreach (var item in items)
         {
-            itemResult = await taskForEachItem(itemResult.SuccessValue, item);
+            itemResult = await taskForEachItem(itemResult.SuccessValue, item).ConfigureAwait(false);
 
             if (itemResult.IsFailure)
                 break;
@@ -333,7 +333,7 @@ public static class ResultChaining
         if (onFailure is null)
             return itemResult;
 
-        var finalFailure = await onFailure(currentSuccess, itemResult.FailureValue);
+        var finalFailure = await onFailure(currentSuccess, itemResult.FailureValue).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : itemResult.FailureValue;
     }
@@ -369,7 +369,7 @@ public static class ResultChaining
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, TResult> convertToResult)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         return successOrFailure.ToResult(convertToResult);
     }
 
@@ -392,7 +392,7 @@ public static class ResultChaining
         Func<TSuccess, List<Result<TSuccess, TFailure>>, Result<TSuccess, TFailure>> resultMergingStrategy,
         params Func<TSuccess, Task<Result<TSuccess, TFailure>>>[] tasks)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -400,7 +400,7 @@ public static class ResultChaining
             return successOrFailure;
 
         var currentSuccess = successOrFailure.SuccessValue;
-        var taskResults = await Task.WhenAll(tasks.Select(task => task(currentSuccess)));
+        var taskResults = await Task.WhenAll(tasks.Select(task => task(currentSuccess))).ConfigureAwait(false);
 
         return resultMergingStrategy(currentSuccess, taskResults.ToList());
     }
@@ -427,13 +427,16 @@ public static class ResultChaining
             return results.Any(x => x.IsFailure) ? results.First(x => x.IsFailure) : input;
         }
 
-        return await source.ThenWaitForAll(DefaultResultMergingStrategy, tasks);
+        return await source.ThenWaitForAll(DefaultResultMergingStrategy, tasks).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Chains an array of jobs which will be executed in parallel. This method will return immediately once the first job has completed.
     /// The result of the <paramref name="source"/> Task is evaluated and if it contains a failure, that failure is immediately returned.
     /// The result of the first completed job will be returned. The other job's results are ignored.
+    /// The remaining jobs are not cancelled (the jobs in this overload accept no cancellation token) and keep running to
+    /// completion; their exceptions are observed so they do not surface as an unobserved task exception. Use the cancellation
+    /// overload in <see cref="ResultChainingWithCancellation"/> to signal cancellation to the losing jobs.
     /// Please note, the success value is passed into each job by ref, so care must be taken around any mutation of any state on it.
     /// </summary>
     /// <typeparam name="TSuccess">Represents success, also likely contains any required state/results for processing in the chain.</typeparam>
@@ -445,7 +448,7 @@ public static class ResultChaining
         this Task<Result<TSuccess, TFailure>> source,
         params Func<TSuccess, Task<Result<TSuccess, TFailure>>>[] tasks)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -453,6 +456,17 @@ public static class ResultChaining
             return successOrFailure;
 
         var currentSuccess = successOrFailure.SuccessValue;
-        return await await Task.WhenAny(tasks.Select(task => task(currentSuccess)));
+        var runningTasks = tasks.Select(task => task(currentSuccess)).ToList();
+        var result = await (await Task.WhenAny(runningTasks).ConfigureAwait(false)).ConfigureAwait(false);
+
+        // The losing jobs keep running; observe their exceptions once they finish so they do not
+        // surface as an UnobservedTaskException.
+        _ = Task.WhenAll(runningTasks).ContinueWith(
+            t => { _ = t.Exception; },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+        return result;
     }
 }

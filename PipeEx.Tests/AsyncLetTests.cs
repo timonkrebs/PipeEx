@@ -40,29 +40,25 @@ public class AsyncLetTests
             .Await((x, _y, z) => x * z))
         .Assert(r => Assert.Equal(2, r));
 
+    // Parameters whose names merely start with '_' are ordinary parameters that carry their
+    // awaited values (1 * 10 * 2 = 20), not a fragile name-based discard that would zero them.
     [Fact]
-    public Task Test5_DiscardMiddleAndLast() =>
+    public Task Test5_UnderscoreNamedParametersCarryRealValues() =>
         Arrange(() => 1)
         .Act<int, int>(x =>
             x.Let(() => Task.FromResult(10))
             .Let(() => Task.FromResult(2))
-            .Await((x,
-            _y,
-
-            _z) => x * _y * _z))
-        .Assert(r => Assert.Equal(0, r));
+            .Await((x, _y, _z) => x * _y * _z))
+        .Assert(r => Assert.Equal(20, r));
 
     [Fact]
-    public Task Test6_DiscardMiddleAndLast() =>
+    public Task Test6_UnderscoreNamedParametersCarryRealValues() =>
         Arrange(() => 1)
         .Act<int, int>(x =>
             x.Let(() => Task.FromResult(10))
             .Let(() => Task.FromResult(2))
-            .Await((x,
-            _y,
-
-            _z) => x + _y + _z))
-        .Assert(r => Assert.Equal(1, r));
+            .Await((x, _y, _z) => x + _y + _z))
+        .Assert(r => Assert.Equal(13, r));
 
     [Fact]
     public Task Test7_DiscardMiddleAndLast() =>
@@ -110,4 +106,17 @@ public class AsyncLetTests
             var result = await resultTask;
             Assert.Equal(36, result);
         });
+
+    // Regression: a method group (any non-lambda projection) used to throw IndexOutOfRangeException
+    // because the discard parser inspected the lambda's source text. Await now accepts it.
+    [Fact]
+    public Task Await_AcceptsMethodGroup() =>
+        Arrange(() => 2)
+        .Act<int, int>(x =>
+            x.Let(() => Task.FromResult(10))
+            .Let(() => Task.FromResult(3))
+            .Await(Sum))
+        .Assert(r => Assert.Equal(15, r));
+
+    private static int Sum(int a, int b, int c) => a + b + c;
 }
