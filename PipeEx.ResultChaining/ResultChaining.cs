@@ -134,7 +134,7 @@ public static class ResultChaining
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, Result<TSuccess, TFailure>> nextJob)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -160,7 +160,7 @@ public static class ResultChaining
         Func<TSuccess, Result<TSuccess, TFailure>> nextJob,
         Func<TSuccess, TFailure, Result<TSuccess, TFailure>> onFailure)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         return successOrFailure.Then(nextJob, onFailure);
     }
 
@@ -178,11 +178,11 @@ public static class ResultChaining
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
-        return await nextJob(successOrFailure.SuccessValue);
+        return await nextJob(successOrFailure.SuccessValue).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -204,17 +204,17 @@ public static class ResultChaining
         Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob,
         Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>> onFailure)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
         var currentSuccess = successOrFailure.SuccessValue;
-        var result = await nextJob(currentSuccess);
+        var result = await nextJob(currentSuccess).ConfigureAwait(false);
 
         if (result.IsSuccess)
             return result;
 
-        var finalFailure = await onFailure(currentSuccess, result.FailureValue);
+        var finalFailure = await onFailure(currentSuccess, result.FailureValue).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : result.FailureValue;
     }
@@ -270,7 +270,7 @@ public static class ResultChaining
         Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob,
         Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>>? onFailure = null)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -278,7 +278,7 @@ public static class ResultChaining
         if (condition(currentSuccess) is false)
             return successOrFailure;
 
-        var result = await nextJob(currentSuccess);
+        var result = await nextJob(currentSuccess).ConfigureAwait(false);
 
         if (result.IsSuccess)
             return result;
@@ -286,7 +286,7 @@ public static class ResultChaining
         if (onFailure is null)
             return result;
 
-        var finalFailure = await onFailure(currentSuccess, result.FailureValue);
+        var finalFailure = await onFailure(currentSuccess, result.FailureValue).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : result.FailureValue;
     }
@@ -311,7 +311,7 @@ public static class ResultChaining
         Func<TSuccess, TItem, Task<Result<TSuccess, TFailure>>> taskForEachItem,
         Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>>? onFailure = null)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -321,7 +321,7 @@ public static class ResultChaining
         var itemResult = successOrFailure;
         foreach (var item in items)
         {
-            itemResult = await taskForEachItem(itemResult.SuccessValue, item);
+            itemResult = await taskForEachItem(itemResult.SuccessValue, item).ConfigureAwait(false);
 
             if (itemResult.IsFailure)
                 break;
@@ -333,7 +333,7 @@ public static class ResultChaining
         if (onFailure is null)
             return itemResult;
 
-        var finalFailure = await onFailure(currentSuccess, itemResult.FailureValue);
+        var finalFailure = await onFailure(currentSuccess, itemResult.FailureValue).ConfigureAwait(false);
 
         return finalFailure.IsFailure ? finalFailure : itemResult.FailureValue;
     }
@@ -369,7 +369,7 @@ public static class ResultChaining
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, TResult> convertToResult)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         return successOrFailure.ToResult(convertToResult);
     }
 
@@ -392,7 +392,7 @@ public static class ResultChaining
         Func<TSuccess, List<Result<TSuccess, TFailure>>, Result<TSuccess, TFailure>> resultMergingStrategy,
         params Func<TSuccess, Task<Result<TSuccess, TFailure>>>[] tasks)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -400,7 +400,7 @@ public static class ResultChaining
             return successOrFailure;
 
         var currentSuccess = successOrFailure.SuccessValue;
-        var taskResults = await Task.WhenAll(tasks.Select(task => task(currentSuccess)));
+        var taskResults = await Task.WhenAll(tasks.Select(task => task(currentSuccess))).ConfigureAwait(false);
 
         return resultMergingStrategy(currentSuccess, taskResults.ToList());
     }
@@ -427,7 +427,7 @@ public static class ResultChaining
             return results.Any(x => x.IsFailure) ? results.First(x => x.IsFailure) : input;
         }
 
-        return await source.ThenWaitForAll(DefaultResultMergingStrategy, tasks);
+        return await source.ThenWaitForAll(DefaultResultMergingStrategy, tasks).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -445,7 +445,7 @@ public static class ResultChaining
         this Task<Result<TSuccess, TFailure>> source,
         params Func<TSuccess, Task<Result<TSuccess, TFailure>>>[] tasks)
     {
-        var successOrFailure = await source;
+        var successOrFailure = await source.ConfigureAwait(false);
         if (successOrFailure.IsFailure)
             return successOrFailure;
 
@@ -453,6 +453,6 @@ public static class ResultChaining
             return successOrFailure;
 
         var currentSuccess = successOrFailure.SuccessValue;
-        return await await Task.WhenAny(tasks.Select(task => task(currentSuccess)));
+        return await (await Task.WhenAny(tasks.Select(task => task(currentSuccess))).ConfigureAwait(false)).ConfigureAwait(false);
     }
 }

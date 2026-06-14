@@ -8,7 +8,7 @@ public static class StructuredConcurrency
     [OverloadResolutionPriority(1)]
     public static async StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, Task<TResult>> func)
     {
-        return await func(source);
+        return await func(source).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, StructuredTask<TResult>> func)
@@ -17,7 +17,7 @@ public static class StructuredConcurrency
         var impl = async () =>
         {
             structuredTask = func(source);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         impl();
@@ -26,7 +26,7 @@ public static class StructuredConcurrency
 
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, TResult> func)
     {
-        return func(await source);
+        return func(await source.ConfigureAwait(false));
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, TResult> func)
@@ -35,7 +35,7 @@ public static class StructuredConcurrency
         var impl = async () =>
         {
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source;
+            var s = await source.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var f = func(s);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -46,7 +46,7 @@ public static class StructuredConcurrency
 
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, Task<TResult>> func)
     {
-        return await func(await source);
+        return await func(await source.ConfigureAwait(false)).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, StructuredTask<TResult>> func)
@@ -64,10 +64,10 @@ public static class StructuredConcurrency
                     tcs.SetException(new OperationCanceledException());
                     return;
                 }
-                var innerStructuredTask = func(await source);
+                var innerStructuredTask = func(await source.ConfigureAwait(false));
 
                 using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                var result = await innerStructuredTask;
+                var result = await innerStructuredTask.ConfigureAwait(false);
 
                 tcs.SetResult(result);
             }
@@ -88,9 +88,9 @@ public static class StructuredConcurrency
         var impl = async () =>
         {
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source;
+            var s = await source.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = await func(s);
+            var f = await func(s).ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             return f;
         };
@@ -114,9 +114,9 @@ public static class StructuredConcurrency
                     return;
                 }
 
-                var innerStructuredTask = func(await source);
+                var innerStructuredTask = func(await source.ConfigureAwait(false));
                 using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                var result = await innerStructuredTask;
+                var result = await innerStructuredTask.ConfigureAwait(false);
 
                 tcs.SetResult(result);
             }
@@ -143,9 +143,9 @@ public static class StructuredConcurrency
         var impl = async () =>
         {
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source;
+            var s = await source.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = await func(s);
+            var f = await func(s).ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             return f;
         };
@@ -162,9 +162,9 @@ public static class StructuredConcurrency
         var impl = async () =>
         {
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source;
+            var s = await source.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = await func(s);
+            var f = await func(s).ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             return f;
         };
@@ -185,7 +185,7 @@ public static class StructuredConcurrency
         var wrapperTask = async () => {
             try {
                 await Task.Yield();
-                var result = await innerStructuredTask;
+                var result = await innerStructuredTask.ConfigureAwait(false);
                 deferredCompletionSource.SetResult(result);
             } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerStructuredTask.CancellationTokenSource.Token) {
                 deferredCompletionSource.SetCanceled(cts.Token);
@@ -213,12 +213,12 @@ public static class StructuredConcurrency
             try
             {
                 await Task.Yield();
-                var s = await source.Task;
+                var s = await source.Task.ConfigureAwait(false);
                 cts.Token.ThrowIfCancellationRequested();
                 innerStructuredTask = func(s);
                 using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
 
-                var result = await innerStructuredTask;
+                var result = await innerStructuredTask.ConfigureAwait(false);
                 deferredTaskCompletionSource.SetResult(result);
             }
             catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || (innerStructuredTask != null && ex.CancellationToken == innerStructuredTask.CancellationTokenSource.Token))
@@ -246,7 +246,7 @@ public static class StructuredConcurrency
         var wrapperTask = async () => {
             try {
                 await Task.Yield();
-                var result = await innerDeferredTask.deferredTask1;
+                var result = await innerDeferredTask.deferredTask1.ConfigureAwait(false);
                 deferredCompletionSource.SetResult(result);
             } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerDeferredTask.CancellationTokenSource.Token) {
                 deferredCompletionSource.SetCanceled(cts.Token);
@@ -269,9 +269,9 @@ public static class StructuredConcurrency
         var impl = async () =>
         {
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.Task;
+            var s = await source.Task.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d = await source.deferredTask1;
+            var d = await source.deferredTask1.ConfigureAwait(false);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
             var f = func(s, d);
             source.CancellationTokenSource.Token.ThrowIfCancellationRequested();

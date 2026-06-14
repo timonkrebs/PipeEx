@@ -47,7 +47,7 @@ public static class GuardExpressions
     {
         if (!predicate(source)) return new ConditionalExecutionResult<TSource>(source, true);
 
-        await action(source);
+        await action(source).ConfigureAwait(false);
         return new ConditionalExecutionResult<TSource>(source);
     }
 
@@ -60,7 +60,7 @@ public static class GuardExpressions
     /// <param name="action">The action to execute if the predicate is true.</param>
     /// <returns>A task containing a ConditionalExecutionResult wrapping the awaited source object.</returns>
     public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this Task<TSource> source, Func<TSource, bool> predicate, Action<TSource> action)
-        => (await source).Guard(predicate, action);
+        => (await source.ConfigureAwait(false)).Guard(predicate, action);
 
     /// <summary>
     /// Awaits the source task and conditionally executes an asynchronous action on the result based on a predicate, returning a ConditionalExecutionResult for chaining.
@@ -71,7 +71,7 @@ public static class GuardExpressions
     /// <param name="action">The asynchronous action to execute if the predicate is true.</param>
     /// <returns>A task containing a ConditionalExecutionResult wrapping the awaited source object.</returns>
     public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this Task<TSource> source, Func<TSource, bool> predicate, Func<TSource, Task> action)
-        => await (await source).Guard(predicate, action);
+        => await (await source.ConfigureAwait(false)).Guard(predicate, action).ConfigureAwait(false);
 
     /// <summary>
     /// Conditionally executes an asynchronous action on the source object if the previous condition in the chain was not skipped.
@@ -86,7 +86,7 @@ public static class GuardExpressions
         if (sourceResult.Skip) return sourceResult; // Short-circuit: if already skipped, propagate the skipped status
         if (!predicate(sourceResult.Value)) return new ConditionalExecutionResult<TSource>(sourceResult.Value, true);
 
-        await action(sourceResult.Value);
+        await action(sourceResult.Value).ConfigureAwait(false);
         return sourceResult;
     }
 
@@ -99,7 +99,7 @@ public static class GuardExpressions
     /// <param name="action">The action to execute if the predicate is true and the previous condition was not skipped.</param>
     /// <returns>A task containing the updated ConditionalExecutionResult.</returns>
     public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this Task<ConditionalExecutionResult<TSource>> sourceResult, Func<TSource, bool> predicate, Action<TSource> action)
-        => (await sourceResult).Guard(predicate, action);
+        => (await sourceResult.ConfigureAwait(false)).Guard(predicate, action);
 
     /// <summary>
     /// Awaits the previous step and conditionally executes an asynchronous action on the result if the previous condition in the chain was not skipped.
@@ -110,7 +110,7 @@ public static class GuardExpressions
     /// <param name="action">The asynchronous action to execute if the predicate is true and the previous condition was not skipped.</param>
     /// <returns>A task containing the updated ConditionalExecutionResult.</returns>
     public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this Task<ConditionalExecutionResult<TSource>> sourceResult, Func<TSource, bool> predicate, Func<TSource, Task> action)
-        => await (await sourceResult).Guard(predicate, action);
+        => await (await sourceResult.ConfigureAwait(false)).Guard(predicate, action).ConfigureAwait(false);
 
     /// <summary>
     /// Executes an alternative action if the previous condition in the chain was skipped.
@@ -138,7 +138,7 @@ public static class GuardExpressions
     {
         if (!sourceResult.Skip) return sourceResult.Value;
 
-        await action(sourceResult.Value);
+        await action(sourceResult.Value).ConfigureAwait(false);
         return sourceResult.Value;
     }
 
@@ -150,7 +150,7 @@ public static class GuardExpressions
     /// <param name="action">The action to execute if the previous condition was skipped.</param>
     /// <returns>A task containing the unwrapped source object.</returns>
     public static async Task<TSource> Else<TSource>(this Task<ConditionalExecutionResult<TSource>> sourceResult, Action<TSource> action)
-        => (await sourceResult).Else(action);
+        => (await sourceResult.ConfigureAwait(false)).Else(action);
 
     /// <summary>
     /// Awaits the previous step and executes an alternative asynchronous action if the previous condition in the chain was skipped.
@@ -160,7 +160,7 @@ public static class GuardExpressions
     /// <param name="action">The asynchronous action to execute if the previous condition was skipped.</param>
     /// <returns>A task containing the unwrapped source object.</returns>
     public static async Task<TSource> Else<TSource>(this Task<ConditionalExecutionResult<TSource>> sourceResult, Func<TSource, Task> action)
-        => await (await sourceResult).Else(action);
+        => await (await sourceResult.ConfigureAwait(false)).Else(action).ConfigureAwait(false);
 }
 
 public class ConditionalExecutionResult<TSource>

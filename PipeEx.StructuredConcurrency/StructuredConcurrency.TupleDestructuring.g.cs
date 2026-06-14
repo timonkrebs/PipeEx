@@ -5,7 +5,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this (TSource1, TSource2) source, Func<TSource1, TSource2, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2);
+        return await func(source.Item1, source.Item2).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TResult>(this (TSource1, TSource2) source, Func<TSource1, TSource2, StructuredTask<TResult>> func)
@@ -15,7 +15,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -23,7 +23,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this Task<(TSource1, TSource2)> s, Func<TSource1, TSource2, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2);
     }
 
@@ -31,7 +31,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2);
         };
 
@@ -40,16 +40,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TResult>(this Task<(TSource1, TSource2)> s, Func<TSource1, TSource2, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TResult>(this StructuredTask<(TSource1, TSource2)> s, Func<TSource1, TSource2, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -67,7 +67,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -87,7 +87,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -122,7 +122,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -142,7 +142,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -167,7 +167,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this (TSource1, TSource2, TSource3) source, Func<TSource1, TSource2, TSource3, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3);
+        return await func(source.Item1, source.Item2, source.Item3).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this (TSource1, TSource2, TSource3) source, Func<TSource1, TSource2, TSource3, StructuredTask<TResult>> func)
@@ -177,7 +177,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -185,7 +185,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this Task<(TSource1, TSource2, TSource3)> s, Func<TSource1, TSource2, TSource3, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3);
     }
 
@@ -193,7 +193,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3);
         };
 
@@ -202,16 +202,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this Task<(TSource1, TSource2, TSource3)> s, Func<TSource1, TSource2, TSource3, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TResult>(this StructuredTask<(TSource1, TSource2, TSource3)> s, Func<TSource1, TSource2, TSource3, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -229,7 +229,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -249,7 +249,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -284,7 +284,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -304,7 +304,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -329,7 +329,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this (TSource1, TSource2, TSource3, TSource4) source, Func<TSource1, TSource2, TSource3, TSource4, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this (TSource1, TSource2, TSource3, TSource4) source, Func<TSource1, TSource2, TSource3, TSource4, StructuredTask<TResult>> func)
@@ -339,7 +339,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -347,7 +347,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4)> s, Func<TSource1, TSource2, TSource3, TSource4, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4);
     }
 
@@ -355,7 +355,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4);
         };
 
@@ -364,16 +364,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4)> s, Func<TSource1, TSource2, TSource3, TSource4, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4)> s, Func<TSource1, TSource2, TSource3, TSource4, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -391,7 +391,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -411,7 +411,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -446,7 +446,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -466,7 +466,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -491,7 +491,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, StructuredTask<TResult>> func)
@@ -501,7 +501,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -509,7 +509,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5);
     }
 
@@ -517,7 +517,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5);
         };
 
@@ -526,16 +526,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -553,7 +553,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -573,7 +573,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -608,7 +608,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -628,7 +628,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -653,7 +653,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, StructuredTask<TResult>> func)
@@ -663,7 +663,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -671,7 +671,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6);
     }
 
@@ -679,7 +679,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6);
         };
 
@@ -688,16 +688,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -715,7 +715,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -735,7 +735,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -770,7 +770,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -790,7 +790,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -815,7 +815,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, StructuredTask<TResult>> func)
@@ -825,7 +825,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -833,7 +833,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7);
     }
 
@@ -841,7 +841,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7);
         };
 
@@ -850,16 +850,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -877,7 +877,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -897,7 +897,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -932,7 +932,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -952,7 +952,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -977,7 +977,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, StructuredTask<TResult>> func)
@@ -987,7 +987,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -995,7 +995,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8);
     }
 
@@ -1003,7 +1003,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8);
         };
 
@@ -1012,16 +1012,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -1039,7 +1039,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1059,7 +1059,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1094,7 +1094,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1114,7 +1114,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1139,7 +1139,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, StructuredTask<TResult>> func)
@@ -1149,7 +1149,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -1157,7 +1157,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9);
     }
 
@@ -1165,7 +1165,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9);
         };
 
@@ -1174,16 +1174,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -1201,7 +1201,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1221,7 +1221,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1256,7 +1256,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1276,7 +1276,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1301,7 +1301,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, StructuredTask<TResult>> func)
@@ -1311,7 +1311,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -1319,7 +1319,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10);
     }
 
@@ -1327,7 +1327,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10);
         };
 
@@ -1336,16 +1336,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -1363,7 +1363,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1383,7 +1383,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1418,7 +1418,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1438,7 +1438,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1463,7 +1463,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, StructuredTask<TResult>> func)
@@ -1473,7 +1473,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -1481,7 +1481,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11);
     }
 
@@ -1489,7 +1489,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11);
         };
 
@@ -1498,16 +1498,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -1525,7 +1525,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1545,7 +1545,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1580,7 +1580,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1600,7 +1600,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1625,7 +1625,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, StructuredTask<TResult>> func)
@@ -1635,7 +1635,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -1643,7 +1643,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12);
     }
 
@@ -1651,7 +1651,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12);
         };
 
@@ -1660,16 +1660,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -1687,7 +1687,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1707,7 +1707,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1742,7 +1742,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1762,7 +1762,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1787,7 +1787,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, Task<TResult>> func)
     {
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13) source, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, StructuredTask<TResult>> func)
@@ -1797,7 +1797,7 @@ public static class TupleDestructuring
         var impl = async () =>
         {
             structuredTask = func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -1805,7 +1805,7 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13);
     }
 
@@ -1813,7 +1813,7 @@ public static class TupleDestructuring
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13);
         };
 
@@ -1822,16 +1822,16 @@ public static class TupleDestructuring
 
     public static async StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this Task<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, Task<TResult>> func)
     {
-        var source = await s;
-        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13);
+        var source = await s.ConfigureAwait(false);
+        return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, TResult>(this StructuredTask<(TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13)> s, Func<TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13);
+            var source = await s.ConfigureAwait(false);
+            return await func(source.Item1, source.Item2, source.Item3, source.Item4, source.Item5, source.Item6, source.Item7, source.Item8, source.Item9, source.Item10, source.Item11, source.Item12, source.Item13).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -1849,7 +1849,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1869,7 +1869,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -1904,7 +1904,7 @@ public static class TupleDestructuring
                 (TSource1, TSource2, TSource3, TSource4, TSource5, TSource6, TSource7, TSource8, TSource9, TSource10, TSource11, TSource12, TSource13) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1924,7 +1924,7 @@ public static class TupleDestructuring
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)

@@ -20,7 +20,7 @@ cat << EOF >> $fileName
 
     public static async StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, Task<TResult>> func)
     {
-        return await func($tv);
+        return await func($tv).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, StructuredTask<TResult>> func)
@@ -30,7 +30,7 @@ cat << EOF >> $fileName
         var impl = async () =>
         {
             structuredTask = func($tv);
-            return await structuredTask;
+            return await structuredTask.ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), structuredTask);
@@ -38,7 +38,7 @@ cat << EOF >> $fileName
 
     public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
     {
-        var source = await s;
+        var source = await s.ConfigureAwait(false);
         return func($tv);
     }
 
@@ -46,7 +46,7 @@ cat << EOF >> $fileName
     {
         var impl = async () =>
         {
-            var source = await s;
+            var source = await s.ConfigureAwait(false);
             return func($tv);
         };
 
@@ -55,16 +55,16 @@ cat << EOF >> $fileName
 
     public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, Task<TResult>> func)
     {
-        var source = await s;
-        return await func($tv);
+        var source = await s.ConfigureAwait(false);
+        return await func($tv).ConfigureAwait(false);
     }
 
     public static StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, Task<TResult>> func)
     {
         var impl = async () =>
         {
-            var source = await s;
-            return await func($tv);
+            var source = await s.ConfigureAwait(false);
+            return await func($tv).ConfigureAwait(false);
         };
 
         return new StructuredTask<TResult>(impl(), s);
@@ -82,7 +82,7 @@ cat << EOF >> $fileName
                 ($ty) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -102,7 +102,7 @@ cat << EOF >> $fileName
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)
@@ -137,7 +137,7 @@ cat << EOF >> $fileName
                 ($ty) source;
                 try
                 {
-                    source = await s;
+                    source = await s.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -157,7 +157,7 @@ cat << EOF >> $fileName
                 try
                 {
                     using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask;
+                    var result = await innerStructuredTask.ConfigureAwait(false);
                     tcs.SetResult(result);
                 }
                 catch (OperationCanceledException)

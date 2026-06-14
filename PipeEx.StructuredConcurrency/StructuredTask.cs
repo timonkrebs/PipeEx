@@ -35,6 +35,12 @@ public class StructuredTask<T> : StructuredTask, IDisposable
 
     public TaskAwaiter<T> GetAwaiter() => Task.GetAwaiter();
 
+    /// <summary>
+    /// Configures how awaits on this task are performed, delegating to the underlying <see cref="System.Threading.Tasks.Task{T}"/>.
+    /// </summary>
+    /// <param name="continueOnCapturedContext">true to attempt to marshal the continuation back to the original context captured; otherwise, false.</param>
+    public ConfiguredTaskAwaitable<T> ConfigureAwait(bool continueOnCapturedContext) => Task.ConfigureAwait(continueOnCapturedContext);
+
     public static implicit operator Task<T>(StructuredTask<T> structuredTask) => structuredTask.Task;
 }
 

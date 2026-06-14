@@ -46,7 +46,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The asynchronous transformation function to apply if the <paramref name="predicate"/> is false. Must not be null.</param>
     /// <returns>A task containing the result of applying either <paramref name="transform"/> or <paramref name="elseTransform"/> based on the predicate.</returns>
     public static async Task<TResult> If<TSource, TResult>(this TSource source, Func<TSource, bool> predicate, Func<TSource, Task<TResult>> transform, Func<TSource, Task<TResult>> elseTransform)
-        => predicate(source) ? await transform(source) : await elseTransform(source);
+        => predicate(source) ? await transform(source).ConfigureAwait(false) : await elseTransform(source).ConfigureAwait(false);
 
     /// <summary>
     /// Conditionally transforms the source object based on a predicate, providing an asynchronous transformation for the true case
@@ -60,7 +60,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The transformation function to apply if the <paramref name="predicate"/> is false. Must not be null.</param>
     /// <returns>A task containing the result of applying either <paramref name="transform"/> or <paramref name="elseTransform"/> based on the predicate.</returns>
     public static async Task<TResult> If<TSource, TResult>(this TSource source, Func<TSource, bool> predicate, Func<TSource, Task<TResult>> transform, Func<TSource, TResult> elseTransform)
-        => predicate(source) ? await transform(source) : elseTransform(source);
+        => predicate(source) ? await transform(source).ConfigureAwait(false) : elseTransform(source);
 
     /// <summary>
     /// Conditionally transforms the source object based on a predicate, providing a synchronous transformation for the true case
@@ -74,7 +74,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The asynchronous transformation function to apply if the <paramref name="predicate"/> is false. Must not be null.</param>
     /// <returns>A task containing the result of applying either <paramref name="transform"/> or <paramref name="elseTransform"/> based on the predicate.</returns>
     public static async Task<TResult> If<TSource, TResult>(this TSource source, Func<TSource, bool> predicate, Func<TSource, TResult> transform, Func<TSource, Task<TResult>> elseTransform)
-        => predicate(source) ? transform(source) : await elseTransform(source);
+        => predicate(source) ? transform(source) : await elseTransform(source).ConfigureAwait(false);
 
     /// <summary>
     /// Awaits the source task and conditionally transforms the result based on a predicate, providing alternative transformations for both true and false cases.
@@ -87,7 +87,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The transformation function to apply if the <paramref name="predicate"/> is false. Must not be null.</param>
     /// <returns>A task containing the result of applying either <paramref name="transform"/> or <paramref name="elseTransform"/> based on the predicate.</returns>
     public static async Task<TResult> If<TSource, TResult>(this Task<TSource> source, Func<TSource, bool> predicate, Func<TSource, TResult> transform, Func<TSource, TResult> elseTransform)
-        => (await source).If(predicate, transform, elseTransform);
+        => (await source.ConfigureAwait(false)).If(predicate, transform, elseTransform);
 
     /// <summary>
     /// Awaits the source task and conditionally transforms the result based on a predicate, providing asynchronous transformations for both true and false cases.
@@ -100,7 +100,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The asynchronous transformation function to apply if the <paramref name="predicate"/> is false. Must not be null.</param>
     /// <returns>A task containing the result of applying either <paramref name="transform"/> or <paramref name="elseTransform"/> based on the predicate.</returns>
     public static async Task<TResult> If<TSource, TResult>(this Task<TSource> source, Func<TSource, bool> predicate, Func<TSource, Task<TResult>> transform, Func<TSource, Task<TResult>> elseTransform)
-        => await (await source).If(predicate, transform, elseTransform);
+        => await (await source.ConfigureAwait(false)).If(predicate, transform, elseTransform).ConfigureAwait(false);
 
     /// <summary>
     /// Awaits the source task and conditionally transforms the result based on a predicate, providing an asynchronous transformation for the true case
@@ -114,7 +114,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The transformation function to apply if the <paramref name="predicate"/> is false. Must not be null.</param>
     /// <returns>A task containing the result of applying either <paramref name="transform"/> or <paramref name="elseTransform"/> based on the predicate.</returns>
     public static async Task<TResult> If<TSource, TResult>(this Task<TSource> source, Func<TSource, bool> predicate, Func<TSource, Task<TResult>> transform, Func<TSource, TResult> elseTransform)
-        => await (await source).If(predicate, transform, elseTransform);
+        => await (await source.ConfigureAwait(false)).If(predicate, transform, elseTransform).ConfigureAwait(false);
 
     /// <summary>
     /// Awaits the source task and conditionally transforms the result based on a predicate, providing a synchronous transformation for the true case
@@ -128,7 +128,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The asynchronous transformation function to apply if the <paramref name="predicate"/> is false. Must not be null.</param>
     /// <returns>A task containing the result of applying either <paramref name="transform"/> or <paramref name="elseTransform"/> based on the predicate.</returns>
     public static async Task<TResult> If<TSource, TResult>(this Task<TSource> source, Func<TSource, bool> predicate, Func<TSource, TResult> transform, Func<TSource, Task<TResult>> elseTransform)
-        => await (await source).If(predicate, transform, elseTransform);
+        => await (await source.ConfigureAwait(false)).If(predicate, transform, elseTransform).ConfigureAwait(false);
 
     /// <summary>
     /// Awaits the source task and selects one of two values based on a predicate.
@@ -141,7 +141,7 @@ public static class IfExpressions
     /// <param name="elseValue">The value to return if the <paramref name="predicate"/> is false.</param>
     /// <returns>A task containing either <paramref name="thenValue"/> or <paramref name="elseValue"/> based on the predicate.</returns>
     public static async Task<TResult> If<TSource, TResult>(this Task<TSource> source, Func<TSource, bool> predicate, TResult thenValue, TResult elseValue)
-        => (await source).If(predicate, thenValue, elseValue);
+        => (await source.ConfigureAwait(false)).If(predicate, thenValue, elseValue);
 
     /// <summary>
     /// Starts a value producing if / else if / else chain.
@@ -186,7 +186,7 @@ public static class IfExpressions
     /// <returns>A task containing an <see cref="IfExpression{TSource, TResult}"/> to be continued with <c>ElseIf</c> or terminated with <c>Else</c>.</returns>
     public static async Task<IfExpression<TSource, TResult>> If<TSource, TResult>(this TSource source, Func<TSource, bool> predicate, Func<TSource, Task<TResult>> transform)
         => predicate(source)
-            ? new IfExpression<TSource, TResult>(source, true, await transform(source))
+            ? new IfExpression<TSource, TResult>(source, true, await transform(source).ConfigureAwait(false))
             : new IfExpression<TSource, TResult>(source, false, default);
 
     /// <summary>
@@ -200,7 +200,7 @@ public static class IfExpressions
     /// <param name="transform">The transformation function to apply if the <paramref name="predicate"/> is true.</param>
     /// <returns>A task containing an <see cref="IfExpression{TSource, TResult}"/> to be continued with <c>ElseIf</c> or terminated with <c>Else</c>.</returns>
     public static async Task<IfExpression<TSource, TResult>> If<TSource, TResult>(this Task<TSource> source, Func<TSource, bool> predicate, Func<TSource, TResult> transform)
-        => (await source).If(predicate, transform);
+        => (await source.ConfigureAwait(false)).If(predicate, transform);
 
     /// <summary>
     /// Awaits the source task and starts a value producing if / else if / else chain on the result, with an asynchronous transformation.
@@ -213,7 +213,7 @@ public static class IfExpressions
     /// <param name="transform">The asynchronous transformation function to apply if the <paramref name="predicate"/> is true.</param>
     /// <returns>A task containing an <see cref="IfExpression{TSource, TResult}"/> to be continued with <c>ElseIf</c> or terminated with <c>Else</c>.</returns>
     public static async Task<IfExpression<TSource, TResult>> If<TSource, TResult>(this Task<TSource> source, Func<TSource, bool> predicate, Func<TSource, Task<TResult>> transform)
-        => await (await source).If(predicate, transform);
+        => await (await source.ConfigureAwait(false)).If(predicate, transform).ConfigureAwait(false);
 
     /// <summary>
     /// Awaits the source task and starts a value producing if / else if / else chain on the result, with a constant branch value.
@@ -226,7 +226,7 @@ public static class IfExpressions
     /// <param name="value">The value the chain produces if the <paramref name="predicate"/> is true.</param>
     /// <returns>A task containing an <see cref="IfExpression{TSource, TResult}"/> to be continued with <c>ElseIf</c> or terminated with <c>Else</c>.</returns>
     public static async Task<IfExpression<TSource, TResult>> If<TSource, TResult>(this Task<TSource> source, Func<TSource, bool> predicate, TResult value)
-        => (await source).If(predicate, value);
+        => (await source.ConfigureAwait(false)).If(predicate, value);
 
     /// <summary>
     /// Adds a branch to the chain. The branch is only evaluated if no previous branch has matched.
@@ -268,7 +268,7 @@ public static class IfExpressions
     public static async Task<IfExpression<TSource, TResult>> ElseIf<TSource, TResult>(this IfExpression<TSource, TResult> source, Func<TSource, bool> predicate, Func<TSource, Task<TResult>> transform)
         => source.IsMatched || !predicate(source.Source)
             ? source
-            : new IfExpression<TSource, TResult>(source.Source, true, await transform(source.Source));
+            : new IfExpression<TSource, TResult>(source.Source, true, await transform(source.Source).ConfigureAwait(false));
 
     /// <summary>
     /// Awaits the chain built so far and adds a branch. The branch is only evaluated if no previous branch has matched.
@@ -280,7 +280,7 @@ public static class IfExpressions
     /// <param name="transform">The transformation function to apply if the <paramref name="predicate"/> is true.</param>
     /// <returns>A task containing an <see cref="IfExpression{TSource, TResult}"/> to be continued with <c>ElseIf</c> or terminated with <c>Else</c>.</returns>
     public static async Task<IfExpression<TSource, TResult>> ElseIf<TSource, TResult>(this Task<IfExpression<TSource, TResult>> source, Func<TSource, bool> predicate, Func<TSource, TResult> transform)
-        => (await source).ElseIf(predicate, transform);
+        => (await source.ConfigureAwait(false)).ElseIf(predicate, transform);
 
     /// <summary>
     /// Awaits the chain built so far and adds a branch with an asynchronous transformation. The branch is only evaluated if no previous branch has matched.
@@ -292,7 +292,7 @@ public static class IfExpressions
     /// <param name="transform">The asynchronous transformation function to apply if the <paramref name="predicate"/> is true.</param>
     /// <returns>A task containing an <see cref="IfExpression{TSource, TResult}"/> to be continued with <c>ElseIf</c> or terminated with <c>Else</c>.</returns>
     public static async Task<IfExpression<TSource, TResult>> ElseIf<TSource, TResult>(this Task<IfExpression<TSource, TResult>> source, Func<TSource, bool> predicate, Func<TSource, Task<TResult>> transform)
-        => await (await source).ElseIf(predicate, transform);
+        => await (await source.ConfigureAwait(false)).ElseIf(predicate, transform).ConfigureAwait(false);
 
     /// <summary>
     /// Awaits the chain built so far and adds a branch with a constant value. The branch is only evaluated if no previous branch has matched.
@@ -304,7 +304,7 @@ public static class IfExpressions
     /// <param name="value">The value the chain produces if the <paramref name="predicate"/> is true.</param>
     /// <returns>A task containing an <see cref="IfExpression{TSource, TResult}"/> to be continued with <c>ElseIf</c> or terminated with <c>Else</c>.</returns>
     public static async Task<IfExpression<TSource, TResult>> ElseIf<TSource, TResult>(this Task<IfExpression<TSource, TResult>> source, Func<TSource, bool> predicate, TResult value)
-        => (await source).ElseIf(predicate, value);
+        => (await source.ConfigureAwait(false)).ElseIf(predicate, value);
 
     /// <summary>
     /// Terminates the chain and produces the final value.
@@ -339,7 +339,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The asynchronous transformation function to apply if no previous branch matched.</param>
     /// <returns>A task containing the result of the first matching branch, or of <paramref name="elseTransform"/> if no branch matched.</returns>
     public static async Task<TResult> Else<TSource, TResult>(this IfExpression<TSource, TResult> source, Func<TSource, Task<TResult>> elseTransform)
-        => source.IsMatched ? source.Result! : await elseTransform(source.Source);
+        => source.IsMatched ? source.Result! : await elseTransform(source.Source).ConfigureAwait(false);
 
     /// <summary>
     /// Awaits the chain built so far, terminates it and produces the final value.
@@ -350,7 +350,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The transformation function to apply if no previous branch matched.</param>
     /// <returns>A task containing the result of the first matching branch, or of <paramref name="elseTransform"/> if no branch matched.</returns>
     public static async Task<TResult> Else<TSource, TResult>(this Task<IfExpression<TSource, TResult>> source, Func<TSource, TResult> elseTransform)
-        => (await source).Else(elseTransform);
+        => (await source.ConfigureAwait(false)).Else(elseTransform);
 
     /// <summary>
     /// Awaits the chain built so far, terminates it and produces the final value, applying an asynchronous transformation if no previous branch matched.
@@ -361,7 +361,7 @@ public static class IfExpressions
     /// <param name="elseTransform">The asynchronous transformation function to apply if no previous branch matched.</param>
     /// <returns>A task containing the result of the first matching branch, or of <paramref name="elseTransform"/> if no branch matched.</returns>
     public static async Task<TResult> Else<TSource, TResult>(this Task<IfExpression<TSource, TResult>> source, Func<TSource, Task<TResult>> elseTransform)
-        => await (await source).Else(elseTransform);
+        => await (await source.ConfigureAwait(false)).Else(elseTransform).ConfigureAwait(false);
 
     /// <summary>
     /// Awaits the chain built so far, terminates it and produces the final value.
@@ -373,7 +373,7 @@ public static class IfExpressions
     /// <param name="value">The value to return if no previous branch matched.</param>
     /// <returns>A task containing the result of the first matching branch, or <paramref name="value"/> if no branch matched.</returns>
     public static async Task<TResult> Else<TSource, TResult>(this Task<IfExpression<TSource, TResult>> source, TResult value)
-        => (await source).Else(value);
+        => (await source.ConfigureAwait(false)).Else(value);
 }
 
 /// <summary>
