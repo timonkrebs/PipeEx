@@ -148,6 +148,30 @@ public class StructuredConcurrencyTests
             Assert.Equal("boom", ex.Message);
         });
 
+    [Fact]
+    public Task Test11_TaskSourceToStructuredTaskFunc_SourceCancellation_CompletesAsCanceledTask() =>
+        Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
+        .Act(x =>
+        {
+            var structuredTask = x.Task.I(StructuredDouble);
+
+            x.SetCanceled();
+            return structuredTask;
+        })
+        .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
+
+    [Fact]
+    public Task Test12_StructuredTaskToStructuredTaskFunc_SourceCancellation_CompletesAsCanceledTask() =>
+        Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
+        .Act(x =>
+        {
+            var structuredTask = x.Task.I(val => Task.FromResult(val * 2)).I(StructuredDouble);
+
+            x.SetCanceled();
+            return structuredTask;
+        })
+        .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
+
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
 
     private static StructuredTask<int> StructuredThrow(int v) =>
