@@ -292,24 +292,55 @@ public class ResultChainingTests
         .Assert(r => Assert.Equal(2, r.SuccessValue));
 
     [Fact]
-    public async Task ThenWaitForFirst_PropagatesTheWinnerFaultWhenALoserAlsoFaults()
+    public async Task ThenWaitForFirst_ObservesLoserFaultEvenWhenWinnerFaults()
     {
-        // The winning job faults immediately, so awaiting it throws. A losing job faults shortly after;
-        // its exception must still be observed (the observation continuation is wired before awaiting the
-        // winner), so the losing fault never surfaces as an UnobservedTaskException.
-        var loserFaulted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // The winning job faults immediately, so awaiting it throws; a losing job faults shortly after.
+        // ThenWaitForFirst wires the loser-observation continuation before awaiting the winner, so the
+        // loser fault is observed rather than escaping as an UnobservedTaskException. Assert that
+        // directly: capture the process-wide event (filtered to the loser's message so parallel tests
+        // cannot pollute it), then force any would-be-unobserved task through finalization. If the fault
+        // were left unobserved, its TaskExceptionHolder finalizer would raise the event during collection.
+        var loserUnobserved = new List<Exception>();
+        void OnUnobserved(object? _, UnobservedTaskExceptionEventArgs e)
+        {
+            if (e.Exception is { } agg && agg.Flatten().InnerExceptions.Any(x => x.Message == "loser boom"))
+            {
+                lock (loserUnobserved) loserUnobserved.Add(agg);
+                e.SetObserved();
+            }
+        }
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            StartWith(1).ThenWaitForFirst(
-                v => Task.FromException<Result<int, string>>(new InvalidOperationException("winner boom")),
-                async v =>
-                {
-                    try { await Task.Delay(50); throw new InvalidOperationException("loser boom"); }
-                    finally { loserFaulted.TrySetResult(true); }
-                }));
+        TaskScheduler.UnobservedTaskException += OnUnobserved;
+        try
+        {
+            var loserFaulted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        Assert.Equal("winner boom", ex.Message);
-        Assert.True(await loserFaulted.Task.WaitAsync(TimeSpan.FromSeconds(10)));
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                StartWith(1).ThenWaitForFirst(
+                    v => Task.FromException<Result<int, string>>(new InvalidOperationException("winner boom")),
+                    async v =>
+                    {
+                        try { await Task.Delay(50); throw new InvalidOperationException("loser boom"); }
+                        finally { loserFaulted.TrySetResult(); }
+                    }));
+
+            Assert.Equal("winner boom", ex.Message);
+            await loserFaulted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+            for (var i = 0; i < 5; i++)
+            {
+                await Task.Delay(50);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+            GC.Collect();
+
+            Assert.Empty(loserUnobserved);
+        }
+        finally
+        {
+            TaskScheduler.UnobservedTaskException -= OnUnobserved;
+        }
     }
 
     [Fact]
