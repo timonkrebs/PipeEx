@@ -25,15 +25,10 @@ cat << EOF >> $fileName
 
     public static StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned before the await is hit.
-        StructuredTask<TResult> structuredTask = default!;
-        var impl = async () =>
-        {
-            structuredTask = func($tv);
-            return await structuredTask.ConfigureAwait(false);
-        };
-
-        return new StructuredTask<TResult>(impl(), structuredTask);
+        // source is a value, so there is nothing to await before func runs: invoke it eagerly and wrap
+        // its task, transferring CancellationTokenSource ownership to the returned handle.
+        var structuredTask = func($tv);
+        return new StructuredTask<TResult>(structuredTask.Task, structuredTask);
     }
 
     public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)

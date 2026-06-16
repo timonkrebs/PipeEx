@@ -12,15 +12,10 @@ public static class StructuredConcurrency
 
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned before the await is hit.
-        StructuredTask<TResult> structuredTask = default!;
-        var impl = async () =>
-        {
-            structuredTask = func(source);
-            return await structuredTask.ConfigureAwait(false);
-        };
-
-        return new StructuredTask<TResult>(impl(), structuredTask);
+        // source is a value, so there is nothing to await before func runs: invoke it eagerly and wrap
+        // its task, transferring CancellationTokenSource ownership to the returned handle.
+        var structuredTask = func(source);
+        return new StructuredTask<TResult>(structuredTask.Task, structuredTask);
     }
 
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, TResult> func)
