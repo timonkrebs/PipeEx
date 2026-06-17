@@ -18,14 +18,7 @@ for item in $(seq 1 12); do
 
 cat << EOF >> $fileName
 
-    /// <summary>
-    /// Applies a transformation function to the source object.
-    /// </summary>
-    /// <typeparam name="TSource">The type of the source object.</typeparam>
-    /// <typeparam name="TResult">The type of the result object.</typeparam>
-    /// <param name="source">The source object tuple.</param>
-    /// <param name="transform">The transformation function.</param>
-    /// <returns>The result of the transformation.</returns>
+    /// <summary>Destructures the source tuple and applies <paramref name="transform"/> to its elements.</summary>
     public static TResult I<$ty, TResult>(this ($ty) source, Func<$ty, TResult> transform)
     {
         return transform($tv);

@@ -12,10 +12,10 @@ public static class GuardExpressions
     /// <returns>A ConditionalExecutionResult wrapping the source object.</returns>
     public static ConditionalExecutionResult<TSource> Guard<TSource>(this TSource source, Func<TSource, bool> predicate, Action<TSource> action)
     {
-        if (!predicate(source)) return new ConditionalExecutionResult<TSource>(source, true); // IsSkipped = true when predicate is false
+        if (!predicate(source)) return new ConditionalExecutionResult<TSource>(source, true);
 
         action(source);
-        return new ConditionalExecutionResult<TSource>(source); // IsSkipped = false (default) when predicate is true and action is executed
+        return new ConditionalExecutionResult<TSource>(source);
     }
 
     /// <summary>
@@ -28,11 +28,11 @@ public static class GuardExpressions
     /// <returns>The updated ConditionalExecutionResult.</returns>
     public static ConditionalExecutionResult<TSource> Guard<TSource>(this ConditionalExecutionResult<TSource> sourceResult, Func<TSource, bool> predicate, Action<TSource> action)
     {
-        if (sourceResult.Skip) return sourceResult; // Short-circuit: if already skipped, propagate the skipped status
-        if (!predicate(sourceResult.Value)) return new ConditionalExecutionResult<TSource>(sourceResult.Value, true); // Mark as skipped if current predicate is false
+        if (sourceResult.Skip) return sourceResult;
+        if (!predicate(sourceResult.Value)) return new ConditionalExecutionResult<TSource>(sourceResult.Value, true);
 
         action(sourceResult.Value);
-        return sourceResult; // Condition met, action executed, propagate the same ConditionalExecutionResult
+        return sourceResult;
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public static class GuardExpressions
     /// <returns>A task containing the updated ConditionalExecutionResult.</returns>
     public static async Task<ConditionalExecutionResult<TSource>> Guard<TSource>(this ConditionalExecutionResult<TSource> sourceResult, Func<TSource, bool> predicate, Func<TSource, Task> action)
     {
-        if (sourceResult.Skip) return sourceResult; // Short-circuit: if already skipped, propagate the skipped status
+        if (sourceResult.Skip) return sourceResult;
         if (!predicate(sourceResult.Value)) return new ConditionalExecutionResult<TSource>(sourceResult.Value, true);
 
         await action(sourceResult.Value).ConfigureAwait(false);
@@ -121,10 +121,10 @@ public static class GuardExpressions
     /// <returns>Unwrapped ConditionalExecutionResult.</returns>
     public static TSource Else<TSource>(this ConditionalExecutionResult<TSource> sourceResult, Action<TSource> action)
     {
-        if (!sourceResult.Skip) return sourceResult.Value; // If not skipped, do nothing and propagate the same result
+        if (!sourceResult.Skip) return sourceResult.Value;
 
-        action(sourceResult.Value); // Execute the else action
-        return sourceResult.Value; // After Else action, reset IsSkipped to false, as we've handled the 'else' case.
+        action(sourceResult.Value);
+        return sourceResult.Value;
     }
 
     /// <summary>
