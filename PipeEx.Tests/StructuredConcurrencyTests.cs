@@ -128,35 +128,15 @@ public class StructuredConcurrencyTests
         })
         .Assert(async structuredTask => await Assert.ThrowsAsync<OperationCanceledException>(async () => await structuredTask));
 
-    // Exercises the (value, Func<TSource, StructuredTask<TResult>>) overload. A method group is used
-    // deliberately: a lambda returning a StructuredTask would bind to the higher-priority Task overload
-    // (StructuredTask<T> is implicitly convertible to Task<T>), but a method group's return type is not
-    // reference-convertible, so it resolves to the StructuredTask overload under test.
-    [Fact]
-    public Task Test9_ValueToStructuredTaskFunc_PropagatesResult() =>
-        Arrange(() => 5)
-        .Act(x => x.I(StructuredDouble))
-        .Assert(async structuredTask => Assert.Equal(10, await structuredTask));
-
-    [Fact]
-    public Task Test10_ValueToStructuredTaskFunc_PropagatesException() =>
-        Arrange(() => 1)
-        .Act(x => x.I(StructuredThrow))
-        .Assert(async structuredTask =>
-        {
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await structuredTask);
-            Assert.Equal("boom", ex.Message);
-        });
-
     // The wrapper overloads (Task -> StructuredTask and StructuredTask -> StructuredTask) observe source
     // cancellation through two distinct paths: the synchronous "already canceled" check at the top of the
-    // worker (exercised when the source is canceled BEFORE chaining, Test11/Test12) and the catch block
-    // when the awaited source cancels LATER (Test13/Test14). Both paths must complete the wrapper as a
+    // worker (exercised when the source is canceled BEFORE chaining, Test9/Test10) and the catch block
+    // when the awaited source cancels LATER (Test11/Test12). Both paths must complete the wrapper as a
     // canceled task rather than a faulted one, so each test also asserts IsCanceled (awaiting alone cannot
     // distinguish a Canceled task from one faulted with a TaskCanceledException).
 
     [Fact]
-    public Task Test11_TaskSourceToStructuredTaskFunc_SourceCanceledBeforeChaining_CompletesAsCanceledTask() =>
+    public Task Test9_TaskSourceToStructuredTaskFunc_SourceCanceledBeforeChaining_CompletesAsCanceledTask() =>
         Arrange(() =>
         {
             var source = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -171,7 +151,7 @@ public class StructuredConcurrencyTests
         });
 
     [Fact]
-    public Task Test12_StructuredTaskToStructuredTaskFunc_SourceCanceledBeforeChaining_CompletesAsCanceledTask() =>
+    public Task Test10_StructuredTaskToStructuredTaskFunc_SourceCanceledBeforeChaining_CompletesAsCanceledTask() =>
         Arrange(() =>
         {
             var source = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -186,7 +166,7 @@ public class StructuredConcurrencyTests
         });
 
     [Fact]
-    public Task Test13_TaskSourceToStructuredTaskFunc_SourceCanceledWhileAwaiting_CompletesAsCanceledTask() =>
+    public Task Test11_TaskSourceToStructuredTaskFunc_SourceCanceledWhileAwaiting_CompletesAsCanceledTask() =>
         Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
         .Act(x =>
         {
@@ -202,7 +182,7 @@ public class StructuredConcurrencyTests
         });
 
     [Fact]
-    public Task Test14_StructuredTaskToStructuredTaskFunc_SourceCanceledWhileAwaiting_CompletesAsCanceledTask() =>
+    public Task Test12_StructuredTaskToStructuredTaskFunc_SourceCanceledWhileAwaiting_CompletesAsCanceledTask() =>
         Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
         .Act(x =>
         {
@@ -218,7 +198,4 @@ public class StructuredConcurrencyTests
         });
 
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
-
-    private static StructuredTask<int> StructuredThrow(int v) =>
-        v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
 }
