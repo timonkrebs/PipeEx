@@ -25,15 +25,9 @@ cat << EOF >> $fileName
 
     public static StructuredTask<TResult> I<$ty, TResult>(this ($ty) source, Func<$ty, StructuredTask<TResult>> func)
     {
-        // This works because the structuredTask is assigned before the await is hit.
-        StructuredTask<TResult> structuredTask = default!;
-        var impl = async () =>
-        {
-            structuredTask = func($tv);
-            return await structuredTask.ConfigureAwait(false);
-        };
-
-        return new StructuredTask<TResult>(impl(), structuredTask);
+        // source is a value, so func runs eagerly with nothing to await first; return its handle
+        // directly, matching the single-source value -> StructuredTask overload.
+        return func($tv);
     }
 
     public static async StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, TResult> func)
