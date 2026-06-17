@@ -148,8 +148,45 @@ public class StructuredConcurrencyTests
             Assert.Equal("boom", ex.Message);
         });
 
+    // The wrapper overloads (Task -> StructuredTask and StructuredTask -> StructuredTask) observe source
+    // cancellation through two distinct paths: the synchronous "already canceled" check at the top of the
+    // worker (exercised when the source is canceled BEFORE chaining, Test11/Test12) and the catch block
+    // when the awaited source cancels LATER (Test13/Test14). Both paths must complete the wrapper as a
+    // canceled task rather than a faulted one, so each test also asserts IsCanceled (awaiting alone cannot
+    // distinguish a Canceled task from one faulted with a TaskCanceledException).
+
     [Fact]
-    public Task Test11_TaskSourceToStructuredTaskFunc_SourceCancellation_CompletesAsCanceledTask() =>
+    public Task Test11_TaskSourceToStructuredTaskFunc_SourceCanceledBeforeChaining_CompletesAsCanceledTask() =>
+        Arrange(() =>
+        {
+            var source = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+            source.SetCanceled();
+            return source;
+        })
+        .Act(x => x.Task.I(StructuredDouble))
+        .Assert(async structuredTask =>
+        {
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask);
+            Assert.True(((Task<int>)structuredTask).IsCanceled);
+        });
+
+    [Fact]
+    public Task Test12_StructuredTaskToStructuredTaskFunc_SourceCanceledBeforeChaining_CompletesAsCanceledTask() =>
+        Arrange(() =>
+        {
+            var source = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+            source.SetCanceled();
+            return source;
+        })
+        .Act(x => x.Task.I(val => Task.FromResult(val * 2)).I(StructuredDouble))
+        .Assert(async structuredTask =>
+        {
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask);
+            Assert.True(((Task<int>)structuredTask).IsCanceled);
+        });
+
+    [Fact]
+    public Task Test13_TaskSourceToStructuredTaskFunc_SourceCanceledWhileAwaiting_CompletesAsCanceledTask() =>
         Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
         .Act(x =>
         {
@@ -158,10 +195,14 @@ public class StructuredConcurrencyTests
             x.SetCanceled();
             return structuredTask;
         })
-        .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
+        .Assert(async structuredTask =>
+        {
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask);
+            Assert.True(((Task<int>)structuredTask).IsCanceled);
+        });
 
     [Fact]
-    public Task Test12_StructuredTaskToStructuredTaskFunc_SourceCancellation_CompletesAsCanceledTask() =>
+    public Task Test14_StructuredTaskToStructuredTaskFunc_SourceCanceledWhileAwaiting_CompletesAsCanceledTask() =>
         Arrange(() => new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously))
         .Act(x =>
         {
@@ -170,7 +211,11 @@ public class StructuredConcurrencyTests
             x.SetCanceled();
             return structuredTask;
         })
-        .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
+        .Assert(async structuredTask =>
+        {
+            await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask);
+            Assert.True(((Task<int>)structuredTask).IsCanceled);
+        });
 
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
 

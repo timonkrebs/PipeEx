@@ -62,6 +62,11 @@ public static class StructuredConcurrency
 
                 tcs.SetResult(result);
             }
+            catch (OperationCanceledException oce)
+            {
+                cts.Cancel();
+                tcs.TrySetCanceled(oce.CancellationToken);
+            }
             catch (Exception ex)
             {
                 cts.Cancel();
@@ -110,6 +115,11 @@ public static class StructuredConcurrency
                 var result = await innerStructuredTask.ConfigureAwait(false);
 
                 tcs.SetResult(result);
+            }
+            catch (OperationCanceledException oce)
+            {
+                cts.Cancel();
+                tcs.TrySetCanceled(oce.CancellationToken);
             }
             catch (Exception ex)
             {
