@@ -52,7 +52,7 @@ public static class StructuredConcurrency
                 if (source.IsCanceled)
                 {
                     cts.Cancel();
-                    tcs.SetException(new OperationCanceledException());
+                    tcs.SetCanceled(cts.Token);
                     return;
                 }
                 var innerStructuredTask = func(await source.ConfigureAwait(false));
@@ -61,6 +61,11 @@ public static class StructuredConcurrency
                 var result = await innerStructuredTask.ConfigureAwait(false);
 
                 tcs.SetResult(result);
+            }
+            catch (OperationCanceledException oce)
+            {
+                cts.Cancel();
+                tcs.TrySetCanceled(oce.CancellationToken);
             }
             catch (Exception ex)
             {
@@ -101,7 +106,7 @@ public static class StructuredConcurrency
                 if (source.Task.IsCanceled)
                 {
                     cts.Cancel();
-                    tcs.SetException(new OperationCanceledException());
+                    tcs.SetCanceled(cts.Token);
                     return;
                 }
 
@@ -110,6 +115,11 @@ public static class StructuredConcurrency
                 var result = await innerStructuredTask.ConfigureAwait(false);
 
                 tcs.SetResult(result);
+            }
+            catch (OperationCanceledException oce)
+            {
+                cts.Cancel();
+                tcs.TrySetCanceled(oce.CancellationToken);
             }
             catch (Exception ex)
             {
