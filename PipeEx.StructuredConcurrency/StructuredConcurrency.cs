@@ -198,6 +198,10 @@ public static class StructuredConcurrency
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<Task<TDeferred>> func) => 
         new StructuredDeferredTask<TSource, TDeferred>(source, func());
 
+    // Prioritised above the StructuredTask-source Let (which carries OverloadResolutionPriority(1) and
+    // matches a StructuredDeferredTask via inheritance) so that chaining a source-arg Let onto a deferred
+    // task keeps the earlier deferred instead of collapsing back to a single-deferred result.
+    [OverloadResolutionPriority(2)]
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<TSource, Task<TDeferred2>> func)
         => new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source.Task, source.deferredTask1, CheckedChain(source, func));
 
