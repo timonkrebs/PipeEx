@@ -131,7 +131,64 @@ public static class StructuredConcurrency
         return new StructuredTask<TResult>(tcs.Task, cts);
     }
 
-    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<Task<TDeferred>> func) => 
+    /// <summary>
+    /// Shared implementation for the generated tuple <c>... -&gt; StructuredTask</c> overloads: awaits
+    /// <paramref name="source"/>, invokes <paramref name="func"/> to get the inner StructuredTask, links
+    /// cancellation through <paramref name="cts"/>, and surfaces its result, cancellation or fault.
+    /// </summary>
+    internal static StructuredTask<TResult> ChainTupleToStructured<TTuple, TResult>(Task<TTuple> source, Func<TTuple, StructuredTask<TResult>> func, CancellationTokenSource cts)
+    {
+        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var impl = async () =>
+        {
+            try
+            {
+                TTuple value;
+                try
+                {
+                    value = await source.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    cts.Cancel();
+                    tcs.SetCanceled(cts.Token);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                    return;
+                }
+
+                var innerStructuredTask = func(value);
+
+                try
+                {
+                    using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
+                    var result = await innerStructuredTask.ConfigureAwait(false);
+                    tcs.SetResult(result);
+                }
+                catch (OperationCanceledException)
+                {
+                    tcs.SetCanceled(innerStructuredTask.CancellationTokenSource.Token);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+        };
+        impl();
+
+        return new StructuredTask<TResult>(tcs.Task, cts);
+    }
+
+    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<Task<TDeferred>> func) =>
         new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), func());
 
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, Task<TDeferred>> func) => 

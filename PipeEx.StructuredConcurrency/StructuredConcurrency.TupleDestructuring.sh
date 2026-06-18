@@ -10,10 +10,12 @@ EOF
 for item in $(seq 1 12); do
     ty="TSource1"
     tv="source.Item1"
+    targ="t.Item1"
 
     for i in $(seq 1 $item); do
         ty="${ty}, TSource$((i + 1))"
         tv="${tv}, source.Item$((i + 1))"
+        targ="${targ}, t.Item$((i + 1))"
     done
 
 cat << EOF >> $fileName
@@ -64,111 +66,11 @@ cat << EOF >> $fileName
         return new StructuredTask<TResult>(impl(), s);
     }
 
-     public static StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
-    {
-        var cts = new CancellationTokenSource();
-        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var impl = async () =>
-        {
-            try
-            {
-                ($ty) source;
-                try
-                {
-                    source = await s.ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    cts.Cancel();
-                    tcs.SetCanceled(cts.Token);
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
-                    return;
-                }
-
-                var innerStructuredTask = func($tv);
-
-                try
-                {
-                    using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask.ConfigureAwait(false);
-                    tcs.SetResult(result);
-                }
-                catch (OperationCanceledException)
-                {
-                    tcs.SetCanceled(innerStructuredTask.CancellationTokenSource.Token);
-                }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
-                }
-            }
-            catch (Exception ex)
-            {
-                tcs.TrySetException(ex);
-            }
-        };
-        impl();
-
-        return new StructuredTask<TResult>(tcs.Task, cts);
-    }
+    public static StructuredTask<TResult> I<$ty, TResult>(this Task<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
+        => StructuredConcurrency.ChainTupleToStructured(s, t => func($targ), new CancellationTokenSource());
 
     public static StructuredTask<TResult> I<$ty, TResult>(this StructuredTask<($ty)> s, Func<$ty, StructuredTask<TResult>> func)
-    {
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(s.CancellationTokenSource.Token);
-        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var impl = async () =>
-        {
-            try
-            {
-                ($ty) source;
-                try
-                {
-                    source = await s.ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    cts.Cancel();
-                    tcs.SetCanceled(cts.Token);
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
-                    return;
-                }
-
-                var innerStructuredTask = func($tv);
-
-                try
-                {
-                    using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
-                    var result = await innerStructuredTask.ConfigureAwait(false);
-                    tcs.SetResult(result);
-                }
-                catch (OperationCanceledException)
-                {
-                    tcs.SetCanceled(innerStructuredTask.CancellationTokenSource.Token);
-                }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
-                }
-            }
-            catch (Exception ex)
-            {
-                tcs.TrySetException(ex);
-            }
-        };
-        impl();
-
-        return new StructuredTask<TResult>(tcs.Task, cts);
-    }
+        => StructuredConcurrency.ChainTupleToStructured(s.Task, t => func($targ), CancellationTokenSource.CreateLinkedTokenSource(s.CancellationTokenSource.Token));
 EOF
 
 done
