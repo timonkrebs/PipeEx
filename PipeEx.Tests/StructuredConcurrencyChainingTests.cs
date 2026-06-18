@@ -104,7 +104,7 @@ public class StructuredConcurrencyChainingTests
         var deferredStarted = false;
         var sourceTcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var chain = sourceTcs.Task.I(v => v)
+        var chain = new StructuredTask<int>(sourceTcs.Task, CancellationToken.None)
             .Let(v => { deferredStarted = true; return Task.FromResult(v + 1); })
             .Await((s, d) => s + d);
 
