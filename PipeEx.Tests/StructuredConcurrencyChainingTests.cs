@@ -137,7 +137,7 @@ public class StructuredConcurrencyChainingTests
     // site rather than being hidden on the deferred task until it is awaited.
     [Fact]
     public void Let_ValueSource_StructuredTaskFactoryThrows_ThrowsAtCallSite() =>
-        Assert.Throws<InvalidOperationException>(() => 1.Let(StructuredThrowSync));
+        Assert.Throws<InvalidOperationException>(() => { _ = 1.Let(StructuredThrowSync); });
 
     // The StructuredTask-source Let must observe cancellation before invoking the factory: cancelling
     // while the source is still pending, then completing it, skips the deferred factory entirely.
