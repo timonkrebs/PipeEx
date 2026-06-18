@@ -80,9 +80,8 @@ cat << EOF >> $fileName
                 }
                 catch (OperationCanceledException)
                 {
-                    // If *source* was cancelled, cancel *our* task.
-                    cts.Cancel(); // Ensure consistent cancellation.
-                    tcs.SetCanceled(cts.Token); // Or SetCanceled() if you don't need the token
+                    cts.Cancel();
+                    tcs.SetCanceled(cts.Token);
                     return;
                 }
                 catch (Exception ex)
@@ -110,8 +109,7 @@ cat << EOF >> $fileName
             }
             catch (Exception ex)
             {
-                // Catch-all: This should rarely happen, but protects against unexpected errors in the setup.
-                tcs.TrySetException(ex);  // Use TrySetException, as the task might already be completed.
+                tcs.TrySetException(ex);
             }
         };
         impl();
@@ -135,9 +133,8 @@ cat << EOF >> $fileName
                 }
                 catch (OperationCanceledException)
                 {
-                    // If *source* was cancelled, cancel *our* task.
-                    cts.Cancel(); // Ensure consistent cancellation.
-                    tcs.SetCanceled(cts.Token); // Or SetCanceled() if you don't need the token
+                    cts.Cancel();
+                    tcs.SetCanceled(cts.Token);
                     return;
                 }
                 catch (Exception ex)
@@ -165,8 +162,7 @@ cat << EOF >> $fileName
             }
             catch (Exception ex)
             {
-                // Catch-all: This should rarely happen, but protects against unexpected errors in the setup.
-                tcs.TrySetException(ex);  // Use TrySetException, as the task might already be completed.
+                tcs.TrySetException(ex);
             }
         };
         impl();
