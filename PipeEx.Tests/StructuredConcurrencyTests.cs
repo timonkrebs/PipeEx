@@ -128,12 +128,11 @@ public class StructuredConcurrencyTests
         })
         .Assert(async structuredTask => await Assert.ThrowsAsync<OperationCanceledException>(async () => await structuredTask));
 
-    // The wrapper overloads (Task -> StructuredTask and StructuredTask -> StructuredTask) observe source
-    // cancellation through two distinct paths: the synchronous "already canceled" check at the top of the
-    // worker (exercised when the source is canceled BEFORE chaining, Test9/Test10) and the catch block
-    // when the awaited source cancels LATER (Test11/Test12). Both paths must complete the wrapper as a
-    // canceled task rather than a faulted one, so each test also asserts IsCanceled (awaiting alone cannot
-    // distinguish a Canceled task from one faulted with a TaskCanceledException).
+    // The wrapper overloads (Task -> StructuredTask and StructuredTask -> StructuredTask) must observe source
+    // cancellation whether the source is already canceled BEFORE chaining (Test9/Test10) or cancels LATER
+    // while being awaited (Test11/Test12). Both cases must complete the wrapper as a canceled task rather
+    // than a faulted one, so each test also asserts IsCanceled (awaiting alone cannot distinguish a Canceled
+    // task from one faulted with a TaskCanceledException).
 
     [Fact]
     public Task Test9_TaskSourceToStructuredTaskFunc_SourceCanceledBeforeChaining_CompletesAsCanceledTask() =>
