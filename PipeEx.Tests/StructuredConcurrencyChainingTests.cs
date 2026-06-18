@@ -86,6 +86,16 @@ public class StructuredConcurrencyChainingTests
         .Act(x => x.Let(() => Task.FromResult(10)).Let(v => Task.FromResult(v + 100)).Await((src, a, b) => src + a + b))
         .Assert(async r => Assert.Equal(112, await r));
 
+    // A deferred Let must thread the source's CancellationTokenSource into the extended chain (rather
+    // than a fresh one) so that cancelling the final task reaches the newly added deferred stage.
+    [Fact]
+    public void DeferredLet_SharesSourceCancellationTokenSource()
+    {
+        var source = 1.Let(() => Task.FromResult(10));
+        var chained = source.Let(v => Task.FromResult(v + 100));
+        Assert.Same(source.CancellationTokenSource, chained.CancellationTokenSource);
+    }
+
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
     private static StructuredTask<int> StructuredThrow(int v) => v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
     private static async Task<int> ThrowAsync() { await Task.Yield(); throw new InvalidOperationException("deferred boom"); }

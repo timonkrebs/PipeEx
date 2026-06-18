@@ -203,10 +203,23 @@ public static class StructuredConcurrency
     // task keeps the earlier deferred instead of collapsing back to a single-deferred result.
     [OverloadResolutionPriority(2)]
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<TSource, Task<TDeferred2>> func)
-        => new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source.Task, source.deferredTask1, CheckedChain(source, func));
+        => new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, CheckedChain(source, func));
 
-    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<Task<TDeferred2>> func) => 
-        new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source.Task, source.deferredTask1, func());
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<Task<TDeferred2>> func) =>
+        new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, func());
+
+    // async-let carries at most two deferred values (there is no three-deferred carrier and no four-arg
+    // Await). A third Let would otherwise bind to the inherited two-deferred overload and silently drop a
+    // deferred, so make it a loud compile error: Await the chain before adding another Let.
+    [OverloadResolutionPriority(3)]
+    [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<TSource, Task<TDeferred3>> func)
+        => throw new NotSupportedException();
+
+    [OverloadResolutionPriority(3)]
+    [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<Task<TDeferred3>> func)
+        => throw new NotSupportedException();
 
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, StructuredTask<TDeferred>> func)
     {

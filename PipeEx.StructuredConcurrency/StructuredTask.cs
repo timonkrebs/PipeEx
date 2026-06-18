@@ -67,6 +67,11 @@ public class StructuredDeferredTask<T, TDeferred1, TDeferred2> : StructuredDefer
 
     internal StructuredDeferredTask(Task<T> task, Task<TDeferred1> deferredTask1, Task<TDeferred2> deferredTask2, CancellationTokenSource cancellationTokenSource)
         : base(task, deferredTask1, cancellationTokenSource) { this.deferredTask2 = deferredTask2; }
+
+    // Extends an existing two-element deferred chain, reusing the source's CancellationTokenSource (with
+    // ownership transfer) so cancellation continues to flow through the newly added stage.
+    internal StructuredDeferredTask(StructuredDeferredTask<T, TDeferred1> source, Task<TDeferred2> deferredTask2)
+        : this(source.Task, source.deferredTask1, deferredTask2, source.CancellationTokenSource) { source.MustHandleDisposing = false; }
 }
 
 /// <summary>
