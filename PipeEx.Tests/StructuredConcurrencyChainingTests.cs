@@ -71,6 +71,18 @@ public class StructuredConcurrencyChainingTests
         .Act(x => x.Let(() => ThrowAsync()).Await((s, d) => s + d))
         .Assert(async r => await Assert.ThrowsAsync<InvalidOperationException>(async () => await r));
 
+    [Fact]
+    public Task Let_StructuredTaskSource_AsyncFunc_Success() =>
+        Arrange(() => new StructuredTask<int>(Task.FromResult(5), CancellationToken.None))
+        .Act(s => s.Let(v => Task.FromResult(v * 2)).Await((src, d) => src + d))
+        .Assert(async r => Assert.Equal(15, await r));
+
+    [Fact]
+    public Task Let_DeferredChain_SourceArgFunc_Success() =>
+        Arrange(() => 1)
+        .Act(x => x.Let(() => Task.FromResult(10)).Let(v => Task.FromResult(v + 100)).Await((src, a, b) => src + a + b))
+        .Assert(async r => Assert.Equal(112, await r));
+
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
     private static StructuredTask<int> StructuredThrow(int v) => v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
     private static async Task<int> ThrowAsync() { await Task.Yield(); throw new InvalidOperationException("deferred boom"); }
