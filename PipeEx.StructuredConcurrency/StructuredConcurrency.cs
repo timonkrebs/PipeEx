@@ -21,19 +21,7 @@ public static class StructuredConcurrency
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, TResult> func)
-    {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        var impl = async () =>
-        {
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = func(s);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            return f;
-        };
-        return new StructuredTask<TResult>(impl(), source);
-    }
+        => new StructuredTask<TResult>(CheckedChain(source, s => Task.FromResult(func(s))), source);
 
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, Task<TResult>> func)
     {
@@ -79,19 +67,7 @@ public static class StructuredConcurrency
     }
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func)
-    {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        var impl = async () =>
-        {
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = await func(s).ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            return f;
-        };
-        return new StructuredTask<TResult>(impl(), source.CancellationTokenSource);
-    }
+        => new StructuredTask<TResult>(CheckedChain(source, func), source);
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
     {
@@ -129,6 +105,27 @@ public static class StructuredConcurrency
         };
         impl();
         return new StructuredTask<TResult>(tcs.Task, cts);
+    }
+
+    /// <summary>
+    /// Awaits <paramref name="source"/> and applies <paramref name="map"/>, observing the source's
+    /// cancellation token before and after each await. Shared by the <see cref="StructuredTask{T}"/>-source
+    /// <c>I</c> and <c>Let</c> overloads so the cancellation-check pattern lives in one place.
+    /// </summary>
+    private static Task<TResult> CheckedChain<TSource, TResult>(StructuredTask<TSource> source, Func<TSource, Task<TResult>> map)
+    {
+        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        return Impl();
+
+        async Task<TResult> Impl()
+        {
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source.ConfigureAwait(false);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var f = await map(s).ConfigureAwait(false);
+            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            return f;
+        }
     }
 
     /// <summary>
@@ -196,42 +193,33 @@ public static class StructuredConcurrency
 
     [OverloadResolutionPriority(1)]
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<TSource, Task<TDeferred>> func)
-    {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        var impl = async () =>
-        {
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = await func(s).ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            return f;
-        };
-
-        return new StructuredDeferredTask<TSource, TDeferred>(source, impl());
-    }
+        => new StructuredDeferredTask<TSource, TDeferred>(source, CheckedChain(source, func));
 
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<Task<TDeferred>> func) => 
         new StructuredDeferredTask<TSource, TDeferred>(source, func());
 
+    // Prioritised above the StructuredTask-source Let (which carries OverloadResolutionPriority(1) and
+    // matches a StructuredDeferredTask via inheritance) so that chaining a source-arg Let onto a deferred
+    // task keeps the earlier deferred instead of collapsing back to a single-deferred result.
+    [OverloadResolutionPriority(2)]
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<TSource, Task<TDeferred2>> func)
-    {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        var impl = async () =>
-        {
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = await func(s).ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            return f;
-        };
+        => new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, CheckedChain(source, func));
 
-        return new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source.Task, source.deferredTask1, impl());
-    }
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<Task<TDeferred2>> func) =>
+        new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, func());
 
-    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<Task<TDeferred2>> func) => 
-        new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source.Task, source.deferredTask1, func());
+    // async-let carries at most two deferred values (there is no three-deferred carrier and no four-arg
+    // Await). A third Let would otherwise bind to the inherited two-deferred overload and silently drop a
+    // deferred, so make it a loud compile error: Await the chain before adding another Let.
+    [OverloadResolutionPriority(3)]
+    [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<TSource, Task<TDeferred3>> func)
+        => throw new NotSupportedException();
+
+    [OverloadResolutionPriority(3)]
+    [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<Task<TDeferred3>> func)
+        => throw new NotSupportedException();
 
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, StructuredTask<TDeferred>> func)
     {
