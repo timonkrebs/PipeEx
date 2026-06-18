@@ -96,6 +96,33 @@ public class StructuredConcurrencyChainingTests
         Assert.Same(source.CancellationTokenSource, chained.CancellationTokenSource);
     }
 
+    // Cancellation of the final chain must reach a newly added deferred stage: with the source still
+    // pending, cancelling and then completing the source throws and the deferred work never starts.
+    [Fact]
+    public async Task DeferredLet_CancellationReachesDeferredStage()
+    {
+        var deferredStarted = false;
+        var sourceTcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var chain = sourceTcs.Task.I(v => v)
+            .Let(v => { deferredStarted = true; return Task.FromResult(v + 1); })
+            .Await((s, d) => s + d);
+
+        chain.CancellationTokenSource.Cancel();
+        sourceTcs.SetResult(5);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await chain);
+        Assert.False(deferredStarted);
+    }
+
+    // Await observes every deferred result even when the projection discards one, so a fault in a
+    // discarded deferred still surfaces.
+    [Fact]
+    public Task LetAwait_ObservesFaultInDiscardedDeferred() =>
+        Arrange(() => 1)
+        .Act(x => x.Let(() => Task.FromResult(10)).Let(() => ThrowAsync()).Await((s, a, _) => s + a))
+        .Assert(async r => await Assert.ThrowsAsync<InvalidOperationException>(async () => await r));
+
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
     private static StructuredTask<int> StructuredThrow(int v) => v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
     private static async Task<int> ThrowAsync() { await Task.Yield(); throw new InvalidOperationException("deferred boom"); }
