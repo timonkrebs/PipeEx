@@ -129,7 +129,7 @@ public class StructuredConcurrencyChainingTests
     public async Task TaskSource_StructuredTaskFactoryThrowsOce_CompletesAsCanceledTask()
     {
         var structuredTask = Task.FromResult(5).I(CanceledStructuredFactory);
-        await Assert.ThrowsAsync<OperationCanceledException>(async () => await structuredTask);
+        await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask);
         Assert.True(((Task<int>)structuredTask).IsCanceled);
     }
 
