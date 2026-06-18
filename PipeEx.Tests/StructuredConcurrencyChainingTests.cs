@@ -13,37 +13,37 @@ public class StructuredConcurrencyChainingTests
     public Task StructuredTaskSource_SyncFunc_Success() =>
         Arrange(() => new StructuredTask<int>(Task.FromResult(5), CancellationToken.None))
         .Act(s => s.I(v => v + 1))
-        .Assert(r => Assert.Equal(6, r));
+        .Assert(async r => Assert.Equal(6, await r));
 
     [Fact]
     public Task StructuredTaskSource_AsyncFunc_Success() =>
         Arrange(() => new StructuredTask<int>(Task.FromResult(5), CancellationToken.None))
         .Act(s => s.I(v => Task.FromResult(v + 1)))
-        .Assert(r => Assert.Equal(6, r));
+        .Assert(async r => Assert.Equal(6, await r));
 
     [Fact]
     public Task TaskSource_StructuredTaskFunc_Success() =>
         Arrange(() => Task.FromResult(5))
         .Act(s => s.I(StructuredDouble))
-        .Assert(r => Assert.Equal(10, r));
+        .Assert(async r => Assert.Equal(10, await r));
 
     [Fact]
     public Task StructuredTaskSource_StructuredTaskFunc_Success() =>
         Arrange(() => new StructuredTask<int>(Task.FromResult(5), CancellationToken.None))
         .Act(s => s.I(StructuredDouble))
-        .Assert(r => Assert.Equal(10, r));
+        .Assert(async r => Assert.Equal(10, await r));
 
     [Fact]
     public Task TupleTaskSource_StructuredTaskFunc_Success() =>
         Arrange(() => Task.FromResult((2, 3)))
         .Act(s => s.I<int, int, int>((a, b) => StructuredDouble(a + b)))
-        .Assert(r => Assert.Equal(10, r));
+        .Assert(async r => Assert.Equal(10, await r));
 
     [Fact]
     public Task TupleStructuredTaskSource_StructuredTaskFunc_Success() =>
         Arrange(() => new StructuredTask<(int, int)>(Task.FromResult((2, 3)), CancellationToken.None))
         .Act(s => s.I<int, int, int>((a, b) => StructuredDouble(a + b)))
-        .Assert(r => Assert.Equal(10, r));
+        .Assert(async r => Assert.Equal(10, await r));
 
     [Fact]
     public Task StructuredTaskSource_AsyncFunc_InnerFaultPropagates() =>
