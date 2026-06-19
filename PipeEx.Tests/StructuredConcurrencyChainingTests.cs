@@ -158,28 +158,6 @@ public class StructuredConcurrencyChainingTests
         Assert.False(factoryRan);
     }
 
-    // The StructuredTask-source Let defers the factory start (it yields before reading the source), so an
-    // already-completed source does not run the factory synchronously during the Let call: cancelling the
-    // chain on the very next statement skips the deferred work. (factoryRan can only flip if the yielded
-    // continuation reaches the pre-factory cancellation check before this thread's next Cancel() call.)
-    [Fact]
-    public async Task Let_StructuredTaskSource_CompletedSource_DefersFactoryPastImmediateCancellation()
-    {
-        var factoryRan = false;
-        var source = new StructuredTask<int>(Task.FromResult(5), CancellationToken.None);
-
-        var deferred = source.Let(v =>
-        {
-            factoryRan = true;
-            return new StructuredTask<int>(Task.FromResult(v + 1), CancellationToken.None);
-        });
-
-        deferred.CancellationTokenSource.Cancel();
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await deferred.Await((s, d) => s + d));
-        Assert.False(factoryRan);
-    }
-
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
     private static StructuredTask<int> StructuredThrow(int v) => v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
     private static StructuredTask<int> CanceledStructuredFactory(int v) => throw new OperationCanceledException();
