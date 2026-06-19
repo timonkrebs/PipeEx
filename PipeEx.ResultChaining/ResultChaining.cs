@@ -174,16 +174,10 @@ public static class ResultChaining
     /// <param name="source">The resulting Task of the previous link in the chain.</param>
     /// <param name="nextJob">A func containing the next piece of work in the chain.</param>
     /// <returns>A Task of <see cref="Result{TSuccess, TFailure}"/>, which enables these extension methods to form a chain.</returns>
-    public static async Task<Result<TSuccess, TFailure>> Then<TSuccess, TFailure>(
+    public static Task<Result<TSuccess, TFailure>> Then<TSuccess, TFailure>(
         this Task<Result<TSuccess, TFailure>> source,
-        Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob)
-    {
-        var successOrFailure = await source.ConfigureAwait(false);
-        if (successOrFailure.IsFailure)
-            return successOrFailure;
-
-        return await nextJob(successOrFailure.SuccessValue).ConfigureAwait(false);
-    }
+        Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob) =>
+        source.Then((success, _) => nextJob(success), CancellationToken.None);
 
     /// <summary>
     /// Chains the next asynchronous job onto the result of the previous one.
@@ -199,25 +193,14 @@ public static class ResultChaining
     /// <param name="onFailure">A func which will be invoked if <paramref name="nextJob"/> fails, it is passed the success value and the failure
     /// and should perform any tidying up tasks as a result of the failure, before returning the final failure to be passed down the chain.</param>
     /// <returns>A Task of <see cref="Result{TSuccess, TFailure}"/>, which enables these extension methods to form a chain.</returns>
-    public static async Task<Result<TSuccess, TFailure>> Then<TSuccess, TFailure>(
+    public static Task<Result<TSuccess, TFailure>> Then<TSuccess, TFailure>(
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob,
-        Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>> onFailure)
-    {
-        var successOrFailure = await source.ConfigureAwait(false);
-        if (successOrFailure.IsFailure)
-            return successOrFailure;
-
-        var currentSuccess = successOrFailure.SuccessValue;
-        var result = await nextJob(currentSuccess).ConfigureAwait(false);
-
-        if (result.IsSuccess)
-            return result;
-
-        var finalFailure = await onFailure(currentSuccess, result.FailureValue).ConfigureAwait(false);
-
-        return finalFailure.IsFailure ? finalFailure : result.FailureValue;
-    }
+        Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>> onFailure) =>
+        source.Then(
+            (success, _) => nextJob(success),
+            (success, failure, _) => onFailure(success, failure),
+            CancellationToken.None);
 
     /// <summary>
     /// Chains the next job onto the result of the previous one, but only invokes <paramref name="nextJob"/>
@@ -264,31 +247,25 @@ public static class ResultChaining
     /// <param name="onFailure">A func which will be invoked if <paramref name="nextJob"/> fails, it is passed the success value and the failure
     /// and should perform any tidying up tasks as a result of the failure, before returning the final failure to be passed down the chain.</param>
     /// <returns>A Task of <see cref="Result{TSuccess, TFailure}"/>, which enables these extension methods to form a chain.</returns>
-    public static async Task<Result<TSuccess, TFailure>> IfThen<TSuccess, TFailure>(
+    public static Task<Result<TSuccess, TFailure>> IfThen<TSuccess, TFailure>(
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, bool> condition,
         Func<TSuccess, Task<Result<TSuccess, TFailure>>> nextJob,
         Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>>? onFailure = null)
     {
-        var successOrFailure = await source.ConfigureAwait(false);
-        if (successOrFailure.IsFailure)
-            return successOrFailure;
+        Func<TSuccess, TFailure, CancellationToken, Task<Result<TSuccess, TFailure>>>? wrappedOnFailure = null;
+        if (onFailure is not null)
+        {
+            var capturedOnFailure = onFailure;
+            wrappedOnFailure = (success, failure, _) => capturedOnFailure(success, failure);
+        }
 
-        var currentSuccess = successOrFailure.SuccessValue;
-        if (condition(currentSuccess) is false)
-            return successOrFailure;
-
-        var result = await nextJob(currentSuccess).ConfigureAwait(false);
-
-        if (result.IsSuccess)
-            return result;
-
-        if (onFailure is null)
-            return result;
-
-        var finalFailure = await onFailure(currentSuccess, result.FailureValue).ConfigureAwait(false);
-
-        return finalFailure.IsFailure ? finalFailure : result.FailureValue;
+        return source.IfThen(
+            (success, _) => condition(success),
+            (success, _) => nextJob(success),
+            CancellationToken.None,
+            true,
+            wrappedOnFailure);
     }
 
     /// <summary>
@@ -305,37 +282,25 @@ public static class ResultChaining
     /// <param name="onFailure">A func which will be invoked if any iteration fails, it is passed the success value and the failure
     /// and should perform any tidying up tasks as a result of the failure, before returning the final failure to be passed down the chain.</param>
     /// <returns>A Task of <see cref="Result{TSuccess, TFailure}"/>, which enables these extension methods to form a chain.</returns>
-    public static async Task<Result<TSuccess, TFailure>> ThenForEach<TSuccess, TFailure, TItem>(
+    public static Task<Result<TSuccess, TFailure>> ThenForEach<TSuccess, TFailure, TItem>(
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, IEnumerable<TItem>> itemsToIterateOver,
         Func<TSuccess, TItem, Task<Result<TSuccess, TFailure>>> taskForEachItem,
         Func<TSuccess, TFailure, Task<Result<TSuccess, TFailure>>>? onFailure = null)
     {
-        var successOrFailure = await source.ConfigureAwait(false);
-        if (successOrFailure.IsFailure)
-            return successOrFailure;
-
-        var currentSuccess = successOrFailure.SuccessValue;
-        var items = itemsToIterateOver(currentSuccess);
-
-        var itemResult = successOrFailure;
-        foreach (var item in items)
+        Func<TSuccess, TFailure, CancellationToken, Task<Result<TSuccess, TFailure>>>? wrappedOnFailure = null;
+        if (onFailure is not null)
         {
-            itemResult = await taskForEachItem(itemResult.SuccessValue, item).ConfigureAwait(false);
-
-            if (itemResult.IsFailure)
-                break;
+            var capturedOnFailure = onFailure;
+            wrappedOnFailure = (success, failure, _) => capturedOnFailure(success, failure);
         }
 
-        if (itemResult.IsSuccess)
-            return itemResult;
-
-        if (onFailure is null)
-            return itemResult;
-
-        var finalFailure = await onFailure(currentSuccess, itemResult.FailureValue).ConfigureAwait(false);
-
-        return finalFailure.IsFailure ? finalFailure : itemResult.FailureValue;
+        return source.ThenForEach(
+            itemsToIterateOver,
+            (success, item, _) => taskForEachItem(success, item),
+            CancellationToken.None,
+            true,
+            wrappedOnFailure);
     }
 
     /// <summary>
@@ -365,13 +330,10 @@ public static class ResultChaining
     /// <param name="source">The resulting Task of the previous link in the chain.</param>
     /// <param name="convertToResult">A func provided to do the conversion.</param>
     /// <returns>A Task of <see cref="Result{TResult, TFailure}"/>, where the success value has been converted.</returns>
-    public static async Task<Result<TResult, TFailure>> ToResult<TResult, TSuccess, TFailure>(
+    public static Task<Result<TResult, TFailure>> ToResult<TResult, TSuccess, TFailure>(
         this Task<Result<TSuccess, TFailure>> source,
-        Func<TSuccess, TResult> convertToResult)
-    {
-        var successOrFailure = await source.ConfigureAwait(false);
-        return successOrFailure.ToResult(convertToResult);
-    }
+        Func<TSuccess, TResult> convertToResult) =>
+        source.ToResult(convertToResult, CancellationToken.None);
 
     /// <summary>
     /// Chains an array of jobs which will be executed in parallel. This method will return once all jobs have completed.
@@ -387,23 +349,15 @@ public static class ResultChaining
     /// it should decide how to merge the results once they have all returned i.e. what to return from this method.</param>
     /// <param name="tasks">A list of jobs to execute in parallel.</param>
     /// <returns>A Task of <see cref="Result{TSuccess, TFailure}"/>, which enables these extension methods to form a chain.</returns>
-    public static async Task<Result<TSuccess, TFailure>> ThenWaitForAll<TSuccess, TFailure>(
+    public static Task<Result<TSuccess, TFailure>> ThenWaitForAll<TSuccess, TFailure>(
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, List<Result<TSuccess, TFailure>>, Result<TSuccess, TFailure>> resultMergingStrategy,
-        params Func<TSuccess, Task<Result<TSuccess, TFailure>>>[] tasks)
-    {
-        var successOrFailure = await source.ConfigureAwait(false);
-        if (successOrFailure.IsFailure)
-            return successOrFailure;
-
-        if (tasks.Length == 0)
-            return successOrFailure;
-
-        var currentSuccess = successOrFailure.SuccessValue;
-        var taskResults = await Task.WhenAll(tasks.Select(task => task(currentSuccess))).ConfigureAwait(false);
-
-        return resultMergingStrategy(currentSuccess, taskResults.ToList());
-    }
+        params Func<TSuccess, Task<Result<TSuccess, TFailure>>>[] tasks) =>
+        source.ThenWaitForAll(
+            (success, _, results) => resultMergingStrategy(success, results),
+            CancellationToken.None,
+            true,
+            Array.ConvertAll(tasks, task => new Func<TSuccess, CancellationToken, Task<Result<TSuccess, TFailure>>>((success, _) => task(success))));
 
     /// <summary>
     /// Chains an array of jobs which will be executed in parallel. This method will return once all jobs have completed.

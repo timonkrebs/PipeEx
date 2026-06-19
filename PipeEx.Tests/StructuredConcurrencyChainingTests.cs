@@ -123,7 +123,44 @@ public class StructuredConcurrencyChainingTests
         .Act(x => x.Let(() => Task.FromResult(10)).Let(() => ThrowAsync()).Await((s, a, _) => s + a))
         .Assert(async r => await Assert.ThrowsAsync<InvalidOperationException>(async () => await r));
 
+    // A scalar Task -> StructuredTask factory that synchronously throws OperationCanceledException must
+    // complete the wrapper as a canceled task (not faulted), matching the source-cancellation paths.
+    [Fact]
+    public async Task TaskSource_StructuredTaskFactoryThrowsOce_CompletesAsCanceledTask()
+    {
+        var structuredTask = Task.FromResult(5).I(CanceledStructuredFactory);
+        await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask);
+        Assert.True(((Task<int>)structuredTask).IsCanceled);
+    }
+
+    // The value-source Let factory runs eagerly, so a synchronous exception surfaces at the Let call
+    // site rather than being hidden on the deferred task until it is awaited.
+    [Fact]
+    public void Let_ValueSource_StructuredTaskFactoryThrows_ThrowsAtCallSite() =>
+        Assert.Throws<InvalidOperationException>(() => { _ = 1.Let(StructuredThrowSync); });
+
+    // The StructuredTask-source Let must observe cancellation before invoking the factory: cancelling
+    // while the source is still pending, then completing it, skips the deferred factory entirely.
+    [Fact]
+    public async Task Let_StructuredTaskSource_StructuredTaskFactory_CancellationSkipsFactory()
+    {
+        var factoryRan = false;
+        var sourceTcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var chain = new StructuredTask<int>(sourceTcs.Task, CancellationToken.None)
+            .Let(v => { factoryRan = true; return new StructuredTask<int>(Task.FromResult(v + 1), CancellationToken.None); })
+            .Await((s, d) => s + d);
+
+        chain.CancellationTokenSource.Cancel();
+        sourceTcs.SetResult(5);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await chain);
+        Assert.False(factoryRan);
+    }
+
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
     private static StructuredTask<int> StructuredThrow(int v) => v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
+    private static StructuredTask<int> CanceledStructuredFactory(int v) => throw new OperationCanceledException();
+    private static StructuredTask<int> StructuredThrowSync(int v) => throw new InvalidOperationException("sync boom");
     private static async Task<int> ThrowAsync() { await Task.Yield(); throw new InvalidOperationException("deferred boom"); }
 }
