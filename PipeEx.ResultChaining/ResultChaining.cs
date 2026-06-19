@@ -330,13 +330,10 @@ public static class ResultChaining
     /// <param name="source">The resulting Task of the previous link in the chain.</param>
     /// <param name="convertToResult">A func provided to do the conversion.</param>
     /// <returns>A Task of <see cref="Result{TResult, TFailure}"/>, where the success value has been converted.</returns>
-    public static async Task<Result<TResult, TFailure>> ToResult<TResult, TSuccess, TFailure>(
+    public static Task<Result<TResult, TFailure>> ToResult<TResult, TSuccess, TFailure>(
         this Task<Result<TSuccess, TFailure>> source,
-        Func<TSuccess, TResult> convertToResult)
-    {
-        var successOrFailure = await source.ConfigureAwait(false);
-        return successOrFailure.ToResult(convertToResult);
-    }
+        Func<TSuccess, TResult> convertToResult) =>
+        source.ToResult(convertToResult, CancellationToken.None);
 
     /// <summary>
     /// Chains an array of jobs which will be executed in parallel. This method will return once all jobs have completed.
@@ -352,23 +349,15 @@ public static class ResultChaining
     /// it should decide how to merge the results once they have all returned i.e. what to return from this method.</param>
     /// <param name="tasks">A list of jobs to execute in parallel.</param>
     /// <returns>A Task of <see cref="Result{TSuccess, TFailure}"/>, which enables these extension methods to form a chain.</returns>
-    public static async Task<Result<TSuccess, TFailure>> ThenWaitForAll<TSuccess, TFailure>(
+    public static Task<Result<TSuccess, TFailure>> ThenWaitForAll<TSuccess, TFailure>(
         this Task<Result<TSuccess, TFailure>> source,
         Func<TSuccess, List<Result<TSuccess, TFailure>>, Result<TSuccess, TFailure>> resultMergingStrategy,
-        params Func<TSuccess, Task<Result<TSuccess, TFailure>>>[] tasks)
-    {
-        var successOrFailure = await source.ConfigureAwait(false);
-        if (successOrFailure.IsFailure)
-            return successOrFailure;
-
-        if (tasks.Length == 0)
-            return successOrFailure;
-
-        var currentSuccess = successOrFailure.SuccessValue;
-        var taskResults = await Task.WhenAll(tasks.Select(task => task(currentSuccess))).ConfigureAwait(false);
-
-        return resultMergingStrategy(currentSuccess, taskResults.ToList());
-    }
+        params Func<TSuccess, Task<Result<TSuccess, TFailure>>>[] tasks) =>
+        source.ThenWaitForAll(
+            (success, _, results) => resultMergingStrategy(success, results),
+            CancellationToken.None,
+            true,
+            Array.ConvertAll(tasks, task => new Func<TSuccess, CancellationToken, Task<Result<TSuccess, TFailure>>>((success, _) => task(success))));
 
     /// <summary>
     /// Chains an array of jobs which will be executed in parallel. This method will return once all jobs have completed.
