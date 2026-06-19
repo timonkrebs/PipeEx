@@ -40,23 +40,36 @@ public static class StructuredConcurrency
         => ChainTupleToStructured(source.Task, func, CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token));
 
     /// <summary>
+    /// Observes <paramref name="ct"/> immediately before and after awaiting <paramref name="task"/> so an
+    /// awaiting chain stops at the nearest await once cancellation is requested. Centralises the
+    /// check-await-check pattern repeated across the awaiting <c>I</c> / <c>Let</c> / <c>Await</c> overloads.
+    /// </summary>
+    private static async Task<T> CheckedAwait<T>(this Task<T> task, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var result = await task.ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        return result;
+    }
+
+    /// <summary>
     /// Awaits <paramref name="source"/> and applies <paramref name="map"/>, observing the source's
     /// cancellation token before and after each await. Shared by the <see cref="StructuredTask{T}"/>-source
-    /// <c>I</c> and <c>Let</c> overloads so the cancellation-check pattern lives in one place.
+    /// <c>I</c> and <c>Let</c> overloads so the cancellation-check pattern lives in one place. The up-front
+    /// check runs synchronously so an already-cancelled source throws from the chaining call itself; the
+    /// trailing check of the source await runs before <paramref name="map"/> is invoked, so cancellation
+    /// observed after the source completes still skips the factory.
     /// </summary>
     private static Task<TResult> CheckedChain<TSource, TResult>(StructuredTask<TSource> source, Func<TSource, Task<TResult>> map)
     {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var ct = source.CancellationTokenSource.Token;
+        ct.ThrowIfCancellationRequested();
         return Impl();
 
         async Task<TResult> Impl()
         {
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var f = await map(s).ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            return f;
+            var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
+            return await map(s).CheckedAwait(ct).ConfigureAwait(false);
         }
     }
 
@@ -238,21 +251,18 @@ public static class StructuredConcurrency
     /// <param name="func">The projection applied to the source and the deferred result.</param>
     public static StructuredDeferredTask<TResult, TDeferredSource> Await<TSource, TDeferredSource, TResult>(this StructuredDeferredTask<TSource, TDeferredSource> source, Func<TSource, TDeferredSource, TResult> func)
     {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var ct = source.CancellationTokenSource.Token;
+        ct.ThrowIfCancellationRequested();
         var impl = async () =>
         {
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.Task.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d = await source.deferredTask1.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
+            var d = await source.deferredTask1.CheckedAwait(ct).ConfigureAwait(false);
             var f = func(s, d);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
             return f;
         };
 
-        var sdt = new StructuredDeferredTask<TResult, TDeferredSource>(impl(), source.deferredTask1, source.CancellationTokenSource);
-        return sdt;
+        return new StructuredDeferredTask<TResult, TDeferredSource>(impl(), source.deferredTask1, source.CancellationTokenSource);
     }
 
     /// <summary>
@@ -269,22 +279,18 @@ public static class StructuredConcurrency
     [OverloadResolutionPriority(1)]
     public static StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2> Await<TSource, TDeferredSource1, TDeferredSource2, TResult>(this StructuredDeferredTask<TSource, TDeferredSource1, TDeferredSource2> source, Func<TSource, TDeferredSource1, TDeferredSource2, TResult> func)
     {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        var ct = source.CancellationTokenSource.Token;
+        ct.ThrowIfCancellationRequested();
         var impl = async () =>
         {
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var s = await source.Task.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d1 = await source.deferredTask1.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var d2 = await source.deferredTask2.ConfigureAwait(false);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
+            var d1 = await source.deferredTask1.CheckedAwait(ct).ConfigureAwait(false);
+            var d2 = await source.deferredTask2.CheckedAwait(ct).ConfigureAwait(false);
             var f = func(s, d1, d2);
-            source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
             return f;
         };
 
-        var sdt = new StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2>(impl(), source.deferredTask1, source.deferredTask2, source.CancellationTokenSource);
-        return sdt;
+        return new StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2>(impl(), source.deferredTask1, source.deferredTask2, source.CancellationTokenSource);
     }
 }
