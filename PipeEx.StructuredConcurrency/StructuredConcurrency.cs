@@ -102,14 +102,20 @@ public static class StructuredConcurrency
     /// <paramref name="source"/>, then — only if cancellation has not been requested — invokes
     /// <paramref name="func"/> for the inner StructuredTask and runs it via <see cref="RunInnerStructured"/>.
     /// Source or factory cancellation (including a factory that throws <see cref="OperationCanceledException"/>)
-    /// completes the task as canceled rather than faulted.
+    /// completes the task as canceled rather than faulted. When <paramref name="deferStart"/> is set the
+    /// worker yields before reading <paramref name="source"/>, so a deferred (<c>Let</c>) chain can still be
+    /// cancelled at the call site before the factory runs even when the source has already completed; the
+    /// awaiting <c>I</c> overloads leave it unset and start synchronously as before.
     /// </summary>
-    private static Task<TResult> ChainInnerStructured<TSource, TResult>(Task<TSource> source, Func<TSource, StructuredTask<TResult>> func, CancellationTokenSource cts)
+    private static Task<TResult> ChainInnerStructured<TSource, TResult>(Task<TSource> source, Func<TSource, StructuredTask<TResult>> func, CancellationTokenSource cts, bool deferStart = false)
     {
         var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var impl = async () =>
         {
+            if (deferStart)
+                await Task.Yield();
+
             TSource value;
             try
             {
@@ -211,7 +217,7 @@ public static class StructuredConcurrency
     {
         source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
         var cts = CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token);
-        return new StructuredDeferredTask<TSource, TDeferred>(source.Task, ChainInnerStructured(source.Task, func, cts), cts);
+        return new StructuredDeferredTask<TSource, TDeferred>(source.Task, ChainInnerStructured(source.Task, func, cts, deferStart: true), cts);
     }
 
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TSource2, TDeferred>(this TSource source, Func<TSource, StructuredDeferredTask<TSource2, TDeferred>> func)
