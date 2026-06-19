@@ -27,5 +27,11 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.300" PrivateAssets="All" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Emits the tuple-arity I overloads (formerly the committed TupleDestructuring.g.cs). -->
+    <ProjectReference Include="..\PipeEx.SourceGenerators\PipeEx.SourceGenerators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
 
 </Project>
