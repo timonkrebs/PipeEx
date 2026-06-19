@@ -30,7 +30,7 @@
   <ItemGroup>
     <!-- Emits the tuple-arity StructuredTask I overloads (formerly StructuredConcurrency.TupleDestructuring.g.cs). -->
     <ProjectReference Include="..\PipeEx.SourceGenerators\PipeEx.SourceGenerators.csproj"
-                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
 
