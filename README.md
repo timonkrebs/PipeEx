@@ -225,7 +225,7 @@ x.Let(() => LoadAAsync(x))
 
 ## Planned Features
 
-- **Deeper cancellation:** `PipeEx.StructuredConcurrency` already carries a `CancellationTokenSource` along a pipe and observes it between stages; interrupting work already in flight is planned.
+- **Deeper cancellation:** `PipeEx.StructuredConcurrency` carries a `CancellationTokenSource` along a pipe and observes it between every stage — now hardened and covered by tests. Still planned: interrupting work that is already in flight, by flowing the token into each stage's job so a running operation can be cancelled rather than only observed between stages.
 - **Resource Management:** Enhanced handling for resources that are not thread-safe (like EF Core DbContext or WPF UI updates).
 
 ## Contributing
