@@ -25,7 +25,7 @@ PipeEx is a lightweight C# library that enables fluent, pipe-like function chain
 - **Asynchronous Support:** Seamlessly chains both synchronous and asynchronous operations (`Task<T>`).
 - **Conditional Expressions:** Express if / else if / else logic, conditional side effects and guards as fluent expressions, synchronously or asynchronously.
 - **Result Chaining:** Railway oriented chaining of methods that can succeed or fail, without exceptions for control flow.
-- **Structured Concurrency:** Run asynchronous steps concurrently with `Let` / `Await` and carry a cancellation token along the pipe.
+- **Structured Concurrency:** Run asynchronous steps concurrently with `Let` / `Await` and flow a cancellation token along the pipe — and into each stage's job, so work already in flight can be cancelled, not just observed between stages.
 - **Simplified Code:** Reduces nesting and complexity, making your code easier to maintain.
 - **Lightweight:** No dependencies without compromising on expressiveness.
 
@@ -198,6 +198,27 @@ StructuredTask<int> task = x.I(FuncXAsync).I(FuncYAsync);
 task.CancellationTokenSource.Cancel();   // observed between pipeline stages
 ```
 
+By default the carried token is only *observed between stages*: a stage that is already running is
+awaited to completion before the next checkpoint throws. To let a running stage stop the moment
+cancellation is requested, take a `CancellationToken` as the stage's last parameter and pass it into the
+asynchronous work — PipeEx flows the pipe's own token in for you, so cancelling the chain interrupts
+whichever stage is in flight:
+
+```csharp
+StructuredTask<int> task = x.I((v, ct) => FetchAsync(v, ct))     // ct is the pipe's token
+                            .I((v, ct) => ProcessAsync(v, ct));
+task.CancellationTokenSource.Cancel();   // interrupts the running stage, not just between stages
+```
+
+The same `(…, CancellationToken)` shape works on the tuple-destructuring overloads and on `Let`, so a
+concurrently running `Let` observes the token and is interrupted too:
+
+```csharp
+x.Let((v, ct) => LoadAAsync(v, ct))      // started immediately, observes the token while running
+ .Let((v, ct) => LoadBAsync(v, ct))
+ .Await((source, a, b) => source + a + b);
+```
+
 #### Concurrent async-let with `Let` / `Await`
 
 `Let` starts an additional asynchronous computation that runs concurrently with the source, and
@@ -219,13 +240,11 @@ x.Let(() => LoadAAsync(x))
  .Await((source, _, b) => source + b);   // LoadAAsync's result is awaited but not used here
 ```
 
-> This package is pre-release. Cancellation is observed between pipeline stages rather than
-> interrupting work already in flight, and a chain holds a `CancellationTokenSource`; dispose the
-> final `StructuredTask<T>` (for example with `using`) when you need deterministic cleanup.
+> This package is pre-release. A chain holds a `CancellationTokenSource`; dispose the final
+> `StructuredTask<T>` (for example with `using`) when you need deterministic cleanup.
 
 ## Planned Features
 
-- **Deeper cancellation:** `PipeEx.StructuredConcurrency` carries a `CancellationTokenSource` along a pipe and observes it between every stage — now hardened and covered by tests. Still planned: interrupting work that is already in flight, by flowing the token into each stage's job so a running operation can be cancelled rather than only observed between stages.
 - **Resource Management:** Enhanced handling for resources that are not thread-safe (like EF Core DbContext or WPF UI updates).
 
 ## Contributing
