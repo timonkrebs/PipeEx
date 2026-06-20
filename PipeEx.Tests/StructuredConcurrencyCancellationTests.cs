@@ -262,6 +262,62 @@ public class StructuredConcurrencyCancellationTests
         await AwaitCanceledPromptly(chain);
     }
 
+    // The generated tuple overloads route every await through the same CheckedAwait path as the scalar
+    // overloads, so cancellation is honoured even when the tuple job ignores the token it was handed.
+
+    // Cancellation requested before the source completes: the checked await throws after the source, so
+    // the job is never invoked (without the checked path the job would run and the chain would complete
+    // successfully despite Cancel()).
+    [Fact]
+    public async Task I_TaskTupleSource_TokenIgnoringJob_CancelBeforeSource_SkipsJobAndCancels()
+    {
+        var sourceTcs = new TaskCompletionSource<(int, int)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var jobInvoked = false;
+        var chain = sourceTcs.Task.I((int a, int b, CancellationToken ct) =>
+        {
+            jobInvoked = true;
+            return Task.FromResult(a + b);
+        });
+
+        chain.CancellationTokenSource.Cancel();
+        sourceTcs.SetResult((2, 3));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await chain);
+        Assert.False(jobInvoked);
+    }
+
+    // Cancellation requested while a token-ignoring job runs and then returns normally: the trailing
+    // checked await surfaces the cancellation after the job completes.
+    [Fact]
+    public async Task I_ValueTupleSource_TokenIgnoringJob_CancelDuringRun_Cancels()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var chain = (2, 3).I(async (int a, int b, CancellationToken ct) =>
+        {
+            started.SetResult();
+            await release.Task;          // ignores ct
+            return a + b;                // returns normally
+        });
+
+        await started.Task;
+        chain.CancellationTokenSource.Cancel();   // requested while the job ran and ignored it
+        release.SetResult();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await chain);
+    }
+
+    // The token-aware StructuredTask tuple overload runs its up-front cancellation check synchronously,
+    // so an already-cancelled source throws from the I(...) call itself (matching the scalar overload).
+    [Fact]
+    public void I_StructuredTaskTupleSource_SourceCtsCanceledBeforeChaining_ThrowsAtCallSite()
+    {
+        var source = new StructuredTask<(int, int)>(Task.FromResult((2, 3)), CancellationToken.None);
+        source.CancellationTokenSource.Cancel();
+        Assert.ThrowsAny<OperationCanceledException>(
+            () => { _ = source.I((int a, int b, CancellationToken ct) => Task.FromResult(a + b)); });
+    }
+
     // Cancels the chain once its job is in flight and asserts the job was interrupted (not run to
     // completion or left hanging).
     private static async Task Cancel(StructuredTask<int> chain, TaskCompletionSource started)

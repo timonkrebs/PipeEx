@@ -78,8 +78,10 @@ public static class StructuredConcurrency
     /// Observes <paramref name="ct"/> immediately before and after awaiting <paramref name="task"/> so an
     /// awaiting chain stops at the nearest await once cancellation is requested. Centralises the
     /// check-await-check pattern repeated across the awaiting <c>I</c> / <c>Let</c> / <c>Await</c> overloads.
+    /// Internal (rather than private) so the generated cancellation-aware tuple <c>I</c> overloads can
+    /// route through the same checked path instead of bypassing cancellation with plain awaits.
     /// </summary>
-    private static async Task<T> CheckedAwait<T>(this Task<T> task, CancellationToken ct)
+    internal static async Task<T> CheckedAwait<T>(this Task<T> task, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var result = await task.ConfigureAwait(false);
