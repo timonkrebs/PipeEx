@@ -382,7 +382,7 @@ public static class IfExpressions
 /// </summary>
 /// <typeparam name="TSource">The type of the source object.</typeparam>
 /// <typeparam name="TResult">The type of the result produced by the chain.</typeparam>
-public sealed class IfExpression<TSource, TResult>
+public readonly struct IfExpression<TSource, TResult>
 {
     internal IfExpression(TSource source, bool isMatched, TResult? result)
     {

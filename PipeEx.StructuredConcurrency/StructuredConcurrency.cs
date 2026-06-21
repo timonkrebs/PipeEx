@@ -1,41 +1,69 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 namespace PipeEx.StructuredConcurrency;
 
+/// <summary>
+/// Extension methods that enable pipe-style chaining (<c>I</c>), deferred parallel execution
+/// (<c>Let</c>), and fan-in projection (<c>Await</c>) on <see cref="StructuredTask{T}"/>.
+/// </summary>
 public static class StructuredConcurrency
 {
+    /// <summary>
+    /// Applies an asynchronous transformation to the source value, returning a <see cref="StructuredTask{TResult}"/>.
+    /// </summary>
     [OverloadResolutionPriority(1)]
     public static async StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, Task<TResult>> func)
     {
         return await func(source).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Invokes a factory that returns a <see cref="StructuredTask{TResult}"/> directly from the source value.
+    /// </summary>
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, StructuredTask<TResult>> func)
     {
         return func(source);
     }
 
+    /// <summary>
+    /// Awaits the source task and applies a synchronous transformation to its result.
+    /// </summary>
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, TResult> func)
     {
         return func(await source.ConfigureAwait(false));
     }
 
+    /// <summary>
+    /// Chains a synchronous transformation onto a <see cref="StructuredTask{TSource}"/>, propagating cancellation.
+    /// </summary>
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, TResult> func)
         => new StructuredTask<TResult>(CheckedChain(source, s => Task.FromResult(func(s))), source);
 
+    /// <summary>
+    /// Awaits the source task and applies an asynchronous transformation to its result.
+    /// </summary>
     public static async StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, Task<TResult>> func)
     {
         return await func(await source.ConfigureAwait(false)).ConfigureAwait(false);
     }
 
-    // The single value/Task source -> StructuredTask overloads funnel through the same ChainTupleToStructured
-    // worker the generated tuple overloads use, so the await/cancellation/fault handling lives in one place.
+    /// <summary>
+    /// Awaits the source task and invokes a factory that returns a <see cref="StructuredTask{TResult}"/>.
+    /// The single value/Task source -> StructuredTask overloads funnel through the same ChainTupleToStructured
+    /// worker the generated tuple overloads use, so the await/cancellation/fault handling lives in one place.
+    /// </summary>
     public static StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, StructuredTask<TResult>> func)
         => ChainTupleToStructured(source, func, new CancellationTokenSource());
 
+    /// <summary>
+    /// Chains an asynchronous transformation onto a <see cref="StructuredTask{TSource}"/>, propagating cancellation.
+    /// </summary>
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, Task<TResult>> func)
         => new StructuredTask<TResult>(CheckedChain(source, func), source);
 
+    /// <summary>
+    /// Chains a <see cref="StructuredTask{TResult}"/> factory onto a <see cref="StructuredTask{TSource}"/>, propagating cancellation.
+    /// </summary>
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
         => ChainTupleToStructured(source.Task, func, CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token));
 
@@ -165,42 +193,67 @@ public static class StructuredConcurrency
     internal static StructuredTask<TResult> ChainTupleToStructured<TTuple, TResult>(Task<TTuple> source, Func<TTuple, StructuredTask<TResult>> func, CancellationTokenSource cts)
         => new StructuredTask<TResult>(ChainInnerStructured(source, func, cts), cts);
 
+    /// <summary>
+    /// Starts a deferred parallel task from a plain source value, using an independent factory (no source arg).
+    /// </summary>
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<Task<TDeferred>> func) =>
         new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), func());
 
-    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, Task<TDeferred>> func) => 
+    /// <summary>
+    /// Starts a deferred parallel task from a plain source value, passing the source to the factory.
+    /// </summary>
+    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, Task<TDeferred>> func) =>
         new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), func(source));
 
+    /// <summary>
+    /// Chains a deferred parallel task onto a <see cref="StructuredTask{TSource}"/>, passing the source value to the factory.
+    /// Cancellation from the source's scope propagates into the deferred task.
+    /// </summary>
     [OverloadResolutionPriority(1)]
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<TSource, Task<TDeferred>> func)
         => new StructuredDeferredTask<TSource, TDeferred>(source, CheckedChain(source, func));
 
-    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<Task<TDeferred>> func) => 
+    /// <summary>
+    /// Chains a deferred parallel task onto a <see cref="StructuredTask{TSource}"/> using an independent factory (no source arg).
+    /// </summary>
+    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<Task<TDeferred>> func) =>
         new StructuredDeferredTask<TSource, TDeferred>(source, func());
 
     // Prioritised above the StructuredTask-source Let (which carries OverloadResolutionPriority(1) and
     // matches a StructuredDeferredTask via inheritance) so that chaining a source-arg Let onto a deferred
     // task keeps the earlier deferred instead of collapsing back to a single-deferred result.
+    /// <summary>
+    /// Adds a second deferred parallel task to an existing <see cref="StructuredDeferredTask{TSource, TDeferred1}"/>, passing the source value to the factory.
+    /// </summary>
     [OverloadResolutionPriority(2)]
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<TSource, Task<TDeferred2>> func)
         => new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, CheckedChain(source, func));
 
+    /// <summary>
+    /// Adds a second deferred parallel task to an existing <see cref="StructuredDeferredTask{TSource, TDeferred1}"/> using an independent factory.
+    /// </summary>
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<Task<TDeferred2>> func) =>
         new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, func());
 
     // async-let carries at most two deferred values (there is no three-deferred carrier and no four-arg
     // Await). A third Let would otherwise bind to the inherited two-deferred overload and silently drop a
     // deferred, so make it a loud compile error: Await the chain before adding another Let.
+    /// <inheritdoc/>
     [OverloadResolutionPriority(3)]
     [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<TSource, Task<TDeferred3>> func)
         => throw new NotSupportedException();
 
+    /// <inheritdoc/>
     [OverloadResolutionPriority(3)]
     [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<Task<TDeferred3>> func)
         => throw new NotSupportedException();
 
+    /// <summary>
+    /// Starts a deferred parallel task from a plain source value using a factory that returns a <see cref="StructuredTask{TDeferred}"/>.
+    /// The factory is invoked eagerly so synchronous exceptions surface at the call site.
+    /// </summary>
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, StructuredTask<TDeferred>> func)
     {
         // Invoke the factory eagerly so its synchronous exceptions surface at the Let call site, matching
@@ -212,6 +265,10 @@ public static class StructuredConcurrency
         return new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), tcs.Task, cts);
     }
 
+    /// <summary>
+    /// Chains a deferred parallel task onto a <see cref="StructuredTask{TSource}"/> using a factory that returns a <see cref="StructuredTask{TDeferred}"/>.
+    /// Cancellation is observed before the factory runs.
+    /// </summary>
     [OverloadResolutionPriority(1)]
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TDeferred>> func)
     {
@@ -220,22 +277,26 @@ public static class StructuredConcurrency
         return new StructuredDeferredTask<TSource, TDeferred>(source.Task, ChainInnerStructured(source.Task, func, cts, deferStart: true), cts);
     }
 
+    /// <summary>
+    /// Wraps an existing <see cref="StructuredDeferredTask{TSource2, TDeferred}"/> inside a new deferred chain rooted at <paramref name="source"/>.
+    /// The deferred result is bridged via a <see cref="TaskCompletionSource{TDeferred}"/> so cancellation flows correctly.
+    /// </summary>
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TSource2, TDeferred>(this TSource source, Func<TSource, StructuredDeferredTask<TSource2, TDeferred>> func)
     {
         var innerDeferredTask = func(source);
         var cts = new CancellationTokenSource();
         var registration = cts.Token.Register(() => innerDeferredTask.CancellationTokenSource.Cancel());
 
-        var deferredCompletionSource = new TaskCompletionSource<TDeferred>();
+        var deferredCompletionSource = new TaskCompletionSource<TDeferred>(TaskCreationOptions.RunContinuationsAsynchronously);
         var wrapperTask = async () => {
             try {
                 await Task.Yield();
                 var result = await innerDeferredTask.deferredTask1.ConfigureAwait(false);
-                deferredCompletionSource.SetResult(result);
+                deferredCompletionSource.TrySetResult(result);
             } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerDeferredTask.CancellationTokenSource.Token) {
-                deferredCompletionSource.SetCanceled(cts.Token);
+                deferredCompletionSource.TrySetCanceled(cts.Token);
             } catch (Exception ex) {
-                deferredCompletionSource.SetException(ex);
+                deferredCompletionSource.TrySetException(ex);
                 cts.Cancel();
             } finally {
                 registration.Dispose();
@@ -245,7 +306,6 @@ public static class StructuredConcurrency
 
         return new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), deferredCompletionSource.Task, cts);
     }
-
 
     /// <summary>
     /// Awaits the source and the deferred result and projects them with <paramref name="func"/>.
