@@ -3,6 +3,8 @@ using PipeEx.ConditionalExpressions;
 
 using static BunsenBurner.ArrangeActAssert;
 
+namespace PipeEx.Tests;
+
 public class CoreTests
 {
     [Fact]
@@ -83,7 +85,6 @@ public class GuardExpressionsTests
         .Act(x => x.Guard(val => val > 5, _ => { }))
         .Assert(result =>
         {
-            Assert.NotNull(result);
             Assert.Equal(10, result.Value);
             Assert.False(result.Skip);
         });
@@ -102,7 +103,6 @@ public class GuardExpressionsTests
     .Act(x => x.Guard(val => val > 5, _ => { }))
     .Assert(result =>
     {
-        Assert.NotNull(result);
         Assert.Equal(3, result.Value);
         Assert.True(result.Skip);
     });
@@ -144,9 +144,8 @@ public class GuardExpressionsTests
                 .Guard(val => val < 20, _ => { }))
     .Assert(result =>
     {
-        Assert.NotNull(result);     // Should not be null
         Assert.Equal(3, result.Value); // Should have the initial Value
-        Assert.True(result.Skip);      // Check the Skip)
+        Assert.True(result.Skip);      // Check the Skip
     });
 
     [Fact]

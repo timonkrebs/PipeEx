@@ -1,4 +1,4 @@
-﻿namespace PipeEx.ConditionalExpressions;
+namespace PipeEx.ConditionalExpressions;
 
 public static class GuardExpressions
 {
@@ -163,14 +163,27 @@ public static class GuardExpressions
         => await (await sourceResult.ConfigureAwait(false)).Else(action).ConfigureAwait(false);
 }
 
-public class ConditionalExecutionResult<TSource>
+/// <summary>
+/// Carries the result of a conditional <c>Guard</c> step: the original value and a flag that
+/// indicates whether the guarded action was skipped (predicate was false).
+/// </summary>
+/// <typeparam name="TSource">The type of the wrapped value.</typeparam>
+public readonly struct ConditionalExecutionResult<TSource>
 {
+    /// <summary>
+    /// Initialises a new result, optionally marking it as skipped.
+    /// </summary>
+    /// <param name="value">The source value being carried through the chain.</param>
+    /// <param name="skip"><see langword="true"/> if the guarded action was not executed because the predicate returned <see langword="false"/>.</param>
     public ConditionalExecutionResult(TSource value, bool skip = false)
     {
         Value = value;
         Skip = skip;
     }
 
+    /// <summary>Gets the value being carried through the chain.</summary>
     public TSource Value { get; }
+
+    /// <summary>Gets a value indicating whether the guarded action was skipped.</summary>
     public bool Skip { get; }
 }
