@@ -95,7 +95,9 @@ public static class StructuredConcurrency
     /// <c>I</c> and <c>Let</c> overloads so the cancellation-check pattern lives in one place. The up-front
     /// check runs synchronously so an already-cancelled source throws from the chaining call itself; the
     /// trailing check of the source await runs before <paramref name="map"/> is invoked, so cancellation
-    /// observed after the source completes still skips the factory.
+    /// observed after the source completes still skips the factory. NOTE: the generated
+    /// <c>StructuredTask</c>-tuple <c>I</c> overloads (TupleDestructuringGenerator) inline this pattern —
+    /// keep them in sync when changing it.
     /// </summary>
     private static Task<TResult> CheckedChain<TSource, TResult>(StructuredTask<TSource> source, Func<TSource, Task<TResult>> map)
     {
@@ -117,7 +119,8 @@ public static class StructuredConcurrency
     /// cancellation and stop while it runs, not only between stages. The token is still observed before
     /// and after each await, so the up-front (synchronous) check still throws from the chaining call on
     /// an already-cancelled source, and a job that ignores the token it was handed is still abandoned at
-    /// its next await.
+    /// its next await. NOTE: the generated <c>StructuredTask</c>-tuple token <c>I</c> overloads
+    /// (TupleDestructuringGenerator) inline this pattern — keep them in sync when changing it.
     /// </summary>
     private static Task<TResult> CheckedChain<TSource, TResult>(StructuredTask<TSource> source, Func<TSource, CancellationToken, Task<TResult>> map)
     {

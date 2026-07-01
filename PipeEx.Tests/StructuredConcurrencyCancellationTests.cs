@@ -207,6 +207,14 @@ public class StructuredConcurrencyCancellationTests
         Assert.Throws<ObjectDisposedException>(() => chain.CancellationTokenSource.Token.ThrowIfCancellationRequested());
     }
 
+    [Fact]
+    public async Task I_TaskSource_TokenJob_OwnsAndDisposesCtsAfterAwait()
+    {
+        var chain = Task.FromResult(5).I(async (int v, CancellationToken ct) => { await Task.Yield(); return v * 2; });
+        using (chain) { Assert.Equal(10, await chain); }
+        Assert.Throws<ObjectDisposedException>(() => chain.CancellationTokenSource.Token.ThrowIfCancellationRequested());
+    }
+
     // Cancellation-aware and token-free stages compose in one chain; the token-free stage simply does not
     // observe the token, while the chain as a whole still produces its value.
     [Fact]
@@ -320,16 +328,16 @@ public class StructuredConcurrencyCancellationTests
 
     // Cancels the chain once its job is in flight and asserts the job was interrupted (not run to
     // completion or left hanging).
-    private static async Task Cancel(StructuredTask<int> chain, TaskCompletionSource started)
+    private static async Task Cancel<T>(StructuredTask<T> chain, TaskCompletionSource started)
     {
         await started.Task;
         chain.CancellationTokenSource.Cancel();
         await AwaitCanceledPromptly(chain);
     }
 
-    private static async Task AwaitCanceledPromptly(StructuredTask<int> chain)
+    private static async Task AwaitCanceledPromptly<T>(StructuredTask<T> chain)
     {
-        var task = (Task<int>)chain;
+        var task = (Task<T>)chain;
         var finished = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10)));
         Assert.True(finished == task, "the in-flight job was not interrupted by the flowed-in cancellation token");
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
