@@ -39,12 +39,49 @@ public static class StructuredConcurrency
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
         => ChainTupleToStructured(source.Task, func, CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token));
 
+    // --- Cancellation-aware I overloads: flow the pipe's token into the running job --------------
+    // These mirror the awaiting I overloads above, but hand the carried CancellationToken to the job so
+    // a running operation can observe cancellation and stop in flight, not only between stages. The
+    // token still gates each await (via CheckedAwait), so a job that ignores the token it was handed is
+    // nonetheless abandoned at its next await once cancellation is requested.
+
+    // Value source: opens a pipe owning a fresh CancellationTokenSource and hands its token to the job.
+    public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, CancellationToken, Task<TResult>> func)
+    {
+        var cts = new CancellationTokenSource();
+        return new StructuredTask<TResult>(Run(), cts);
+
+        // async so a factory that throws synchronously faults the task (matching the awaiting value-source
+        // overload) rather than throwing from this chaining call.
+        async Task<TResult> Run() => await func(source, cts.Token).CheckedAwait(cts.Token).ConfigureAwait(false);
+    }
+
+    // Task source: awaits the source, then runs the cancellation-aware job under a fresh owned token.
+    public static StructuredTask<TResult> I<TSource, TResult>(this Task<TSource> source, Func<TSource, CancellationToken, Task<TResult>> func)
+    {
+        var cts = new CancellationTokenSource();
+        return new StructuredTask<TResult>(Run(), cts);
+
+        async Task<TResult> Run()
+        {
+            var s = await source.CheckedAwait(cts.Token).ConfigureAwait(false);
+            return await func(s, cts.Token).CheckedAwait(cts.Token).ConfigureAwait(false);
+        }
+    }
+
+    // StructuredTask source: shares the carried token (ownership transfer), so the job observes the same
+    // cancellation that flows along the chain and cancelling the chain interrupts it while it runs.
+    public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, CancellationToken, Task<TResult>> func)
+        => new StructuredTask<TResult>(CheckedChain(source, func), source);
+
     /// <summary>
     /// Observes <paramref name="ct"/> immediately before and after awaiting <paramref name="task"/> so an
     /// awaiting chain stops at the nearest await once cancellation is requested. Centralises the
     /// check-await-check pattern repeated across the awaiting <c>I</c> / <c>Let</c> / <c>Await</c> overloads.
+    /// Internal (rather than private) so the generated cancellation-aware tuple <c>I</c> overloads can
+    /// route through the same checked path instead of bypassing cancellation with plain awaits.
     /// </summary>
-    private static async Task<T> CheckedAwait<T>(this Task<T> task, CancellationToken ct)
+    internal static async Task<T> CheckedAwait<T>(this Task<T> task, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var result = await task.ConfigureAwait(false);
@@ -58,7 +95,9 @@ public static class StructuredConcurrency
     /// <c>I</c> and <c>Let</c> overloads so the cancellation-check pattern lives in one place. The up-front
     /// check runs synchronously so an already-cancelled source throws from the chaining call itself; the
     /// trailing check of the source await runs before <paramref name="map"/> is invoked, so cancellation
-    /// observed after the source completes still skips the factory.
+    /// observed after the source completes still skips the factory. NOTE: the generated
+    /// <c>StructuredTask</c>-tuple <c>I</c> overloads (TupleDestructuringGenerator) inline this pattern —
+    /// keep them in sync when changing it.
     /// </summary>
     private static Task<TResult> CheckedChain<TSource, TResult>(StructuredTask<TSource> source, Func<TSource, Task<TResult>> map)
     {
@@ -70,6 +109,29 @@ public static class StructuredConcurrency
         {
             var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
             return await map(s).CheckedAwait(ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Cancellation-token-aware overload of
+    /// <see cref="CheckedChain{TSource,TResult}(StructuredTask{TSource}, Func{TSource, Task{TResult}})"/>:
+    /// hands the source's cancellation token to <paramref name="map"/> so the chained job can observe
+    /// cancellation and stop while it runs, not only between stages. The token is still observed before
+    /// and after each await, so the up-front (synchronous) check still throws from the chaining call on
+    /// an already-cancelled source, and a job that ignores the token it was handed is still abandoned at
+    /// its next await. NOTE: the generated <c>StructuredTask</c>-tuple token <c>I</c> overloads
+    /// (TupleDestructuringGenerator) inline this pattern — keep them in sync when changing it.
+    /// </summary>
+    private static Task<TResult> CheckedChain<TSource, TResult>(StructuredTask<TSource> source, Func<TSource, CancellationToken, Task<TResult>> map)
+    {
+        var ct = source.CancellationTokenSource.Token;
+        ct.ThrowIfCancellationRequested();
+        return Impl();
+
+        async Task<TResult> Impl()
+        {
+            var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
+            return await map(s, ct).CheckedAwait(ct).ConfigureAwait(false);
         }
     }
 
@@ -168,11 +230,38 @@ public static class StructuredConcurrency
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<Task<TDeferred>> func) =>
         new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), func());
 
-    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, Task<TDeferred>> func) => 
+    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, Task<TDeferred>> func) =>
         new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), func(source));
+
+    // Cancellation-aware value-source Let: hand the carried token to the deferred work so cancelling the
+    // chain interrupts it in flight. Unlike the token-free overload above — whose fresh
+    // CancellationTokenSource the eagerly-started deferred never observes — the deferred here is handed
+    // the token, so the chain's CancellationTokenSource actually reaches the running work.
+    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, CancellationToken, Task<TDeferred>> func)
+    {
+        var cts = new CancellationTokenSource();
+        try
+        {
+            return new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), func(source, cts.Token), cts);
+        }
+        catch
+        {
+            // A factory that throws synchronously surfaces at the call site (matching the token-free
+            // value-source Let); dispose the token source created up-front so it does not leak.
+            cts.Dispose();
+            throw;
+        }
+    }
 
     [OverloadResolutionPriority(1)]
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<TSource, Task<TDeferred>> func)
+        => new StructuredDeferredTask<TSource, TDeferred>(source, CheckedChain(source, func));
+
+    // Cancellation-aware StructuredTask-source Let: the deferred work is handed the source's token (via
+    // the token-aware CheckedChain) so cancellation reaches it while it runs. Priority mirrors the
+    // token-free overload above so a deferred-source Let still wins when chaining onto a deferred task.
+    [OverloadResolutionPriority(1)]
+    public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<TSource, CancellationToken, Task<TDeferred>> func)
         => new StructuredDeferredTask<TSource, TDeferred>(source, CheckedChain(source, func));
 
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<Task<TDeferred>> func) => 
@@ -183,6 +272,12 @@ public static class StructuredConcurrency
     // task keeps the earlier deferred instead of collapsing back to a single-deferred result.
     [OverloadResolutionPriority(2)]
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<TSource, Task<TDeferred2>> func)
+        => new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, CheckedChain(source, func));
+
+    // Cancellation-aware deferred-source Let: extends the chain with a second deferred that is handed the
+    // chain's token, so cancellation reaches the newly added stage while it runs.
+    [OverloadResolutionPriority(2)]
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<TSource, CancellationToken, Task<TDeferred2>> func)
         => new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, CheckedChain(source, func));
 
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<Task<TDeferred2>> func) =>
@@ -199,6 +294,13 @@ public static class StructuredConcurrency
     [OverloadResolutionPriority(3)]
     [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<Task<TDeferred3>> func)
+        => throw new NotSupportedException();
+
+    // The cancellation-aware third Let must be a loud compile error too, otherwise it would bind to the
+    // two-deferred token overload (via inheritance) and silently drop a deferred.
+    [OverloadResolutionPriority(3)]
+    [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<TSource, CancellationToken, Task<TDeferred3>> func)
         => throw new NotSupportedException();
 
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, StructuredTask<TDeferred>> func)

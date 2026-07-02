@@ -99,10 +99,17 @@ public sealed class TupleDestructuringGenerator : IIncrementalGenerator
             sb.AppendLine();
             sb.AppendLine($"    public static StructuredTask<TResult> I<{ty}, TResult>(this StructuredTask<({ty})> s, Func<{ty}, TResult> func)");
             sb.AppendLine("    {");
+            sb.AppendLine("        // Mirrors StructuredConcurrency.CheckedChain (keep in sync): up-front synchronous check,");
+            sb.AppendLine("        // source await gated by CheckedAwait, trailing check after the projection — so the tuple");
+            sb.AppendLine("        // path observes cancellation exactly like the scalar StructuredTask-source overload.");
+            sb.AppendLine("        var ct = s.CancellationTokenSource.Token;");
+            sb.AppendLine("        ct.ThrowIfCancellationRequested();");
             sb.AppendLine("        var impl = async () =>");
             sb.AppendLine("        {");
-            sb.AppendLine("            var source = await s.ConfigureAwait(false);");
-            sb.AppendLine($"            return func({tv});");
+            sb.AppendLine("            var source = await s.Task.CheckedAwait(ct).ConfigureAwait(false);");
+            sb.AppendLine($"            var result = func({tv});");
+            sb.AppendLine("            ct.ThrowIfCancellationRequested();");
+            sb.AppendLine("            return result;");
             sb.AppendLine("        };");
             sb.AppendLine();
             sb.AppendLine("        return new StructuredTask<TResult>(impl(), s);");
@@ -116,10 +123,15 @@ public sealed class TupleDestructuringGenerator : IIncrementalGenerator
             sb.AppendLine();
             sb.AppendLine($"    public static StructuredTask<TResult> I<{ty}, TResult>(this StructuredTask<({ty})> s, Func<{ty}, Task<TResult>> func)");
             sb.AppendLine("    {");
+            sb.AppendLine("        // Mirrors StructuredConcurrency.CheckedChain (keep in sync): up-front synchronous check and");
+            sb.AppendLine("        // every await gated by CheckedAwait — so the tuple path observes cancellation exactly like");
+            sb.AppendLine("        // the scalar StructuredTask-source overload.");
+            sb.AppendLine("        var ct = s.CancellationTokenSource.Token;");
+            sb.AppendLine("        ct.ThrowIfCancellationRequested();");
             sb.AppendLine("        var impl = async () =>");
             sb.AppendLine("        {");
-            sb.AppendLine("            var source = await s.ConfigureAwait(false);");
-            sb.AppendLine($"            return await func({tv}).ConfigureAwait(false);");
+            sb.AppendLine("            var source = await s.Task.CheckedAwait(ct).ConfigureAwait(false);");
+            sb.AppendLine($"            return await func({tv}).CheckedAwait(ct).ConfigureAwait(false);");
             sb.AppendLine("        };");
             sb.AppendLine();
             sb.AppendLine("        return new StructuredTask<TResult>(impl(), s);");
@@ -130,6 +142,46 @@ public sealed class TupleDestructuringGenerator : IIncrementalGenerator
             sb.AppendLine();
             sb.AppendLine($"    public static StructuredTask<TResult> I<{ty}, TResult>(this StructuredTask<({ty})> s, Func<{ty}, StructuredTask<TResult>> func)");
             sb.AppendLine($"        => StructuredConcurrency.ChainTupleToStructured(s.Task, t => func({targ}), CancellationTokenSource.CreateLinkedTokenSource(s.CancellationTokenSource.Token));");
+
+            // Cancellation-aware tuple overloads: destructure the source and hand the carried token to the
+            // job (the value/Task sources own a fresh CancellationTokenSource; the StructuredTask source
+            // shares its own) so a running operation can be cancelled in flight, not only between stages.
+            // Every await is gated by CheckedAwait — the same checked path the scalar token overloads use —
+            // so cancellation is honoured between the source and the job, and after the job, even when the
+            // job ignores the token it was handed.
+            sb.AppendLine();
+            sb.AppendLine($"    public static StructuredTask<TResult> I<{ty}, TResult>(this ({ty}) source, Func<{ty}, CancellationToken, Task<TResult>> func)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        var cts = new CancellationTokenSource();");
+            sb.AppendLine($"        var impl = async () => await func({tv}, cts.Token).CheckedAwait(cts.Token).ConfigureAwait(false);");
+            sb.AppendLine("        return new StructuredTask<TResult>(impl(), cts);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine($"    public static StructuredTask<TResult> I<{ty}, TResult>(this Task<({ty})> s, Func<{ty}, CancellationToken, Task<TResult>> func)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        var cts = new CancellationTokenSource();");
+            sb.AppendLine("        var impl = async () =>");
+            sb.AppendLine("        {");
+            sb.AppendLine("            var source = await s.CheckedAwait(cts.Token).ConfigureAwait(false);");
+            sb.AppendLine($"            return await func({tv}, cts.Token).CheckedAwait(cts.Token).ConfigureAwait(false);");
+            sb.AppendLine("        };");
+            sb.AppendLine("        return new StructuredTask<TResult>(impl(), cts);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+            sb.AppendLine($"    public static StructuredTask<TResult> I<{ty}, TResult>(this StructuredTask<({ty})> s, Func<{ty}, CancellationToken, Task<TResult>> func)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        // Inlines the token-aware StructuredConcurrency.CheckedChain pattern (keep in sync): the");
+            sb.AppendLine("        // tuple func signature cannot be fed to CheckedChain without an adapter, so the up-front");
+            sb.AppendLine("        // check + CheckedAwait-gated awaits are reproduced here verbatim.");
+            sb.AppendLine("        var ct = s.CancellationTokenSource.Token;");
+            sb.AppendLine("        ct.ThrowIfCancellationRequested();");
+            sb.AppendLine("        var impl = async () =>");
+            sb.AppendLine("        {");
+            sb.AppendLine("            var source = await s.Task.CheckedAwait(ct).ConfigureAwait(false);");
+            sb.AppendLine($"            return await func({tv}, ct).CheckedAwait(ct).ConfigureAwait(false);");
+            sb.AppendLine("        };");
+            sb.AppendLine("        return new StructuredTask<TResult>(impl(), s);");
+            sb.AppendLine("    }");
         }
 
         sb.AppendLine("}");

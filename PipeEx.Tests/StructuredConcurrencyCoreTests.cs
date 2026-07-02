@@ -86,6 +86,74 @@ public class StructuredConcurrencyCoreTests
         Assert.False(structuredTask.CancellationTokenSource.IsCancellationRequested);
     }
 
+    // --- Generated StructuredTask-tuple I overloads: CheckedChain parity (token-free) -----------
+    // The generated tuple overloads previously bypassed cancellation with plain awaits; they now mirror
+    // the scalar CheckedChain contract, so `tupleSource.I((a, b) => ...)` observes cancellation exactly
+    // like `source.I(v => ...)`.
+
+    [Fact]
+    public async Task I_TupleStructuredTaskSource_SyncFunc_Success()
+    {
+        var source = new StructuredTask<(int, int)>(Task.FromResult((2, 3)), CancellationToken.None);
+        Assert.Equal(5, await source.I((int a, int b) => a + b));
+    }
+
+    [Fact]
+    public async Task I_TupleStructuredTaskSource_AsyncFunc_Success()
+    {
+        var source = new StructuredTask<(int, int)>(Task.FromResult((2, 3)), CancellationToken.None);
+        Assert.Equal(6, await source.I((int a, int b) => Task.FromResult(a * b)));
+    }
+
+    [Fact]
+    public void I_TupleStructuredTaskSource_SyncFunc_SourceCtsCanceledBeforeChaining_ThrowsAtCallSite()
+    {
+        var source = new StructuredTask<(int, int)>(Task.FromResult((2, 3)), CancellationToken.None);
+        source.CancellationTokenSource.Cancel();
+        Assert.ThrowsAny<OperationCanceledException>(() => { _ = source.I((int a, int b) => a + b); });
+    }
+
+    [Fact]
+    public void I_TupleStructuredTaskSource_AsyncFunc_SourceCtsCanceledBeforeChaining_ThrowsAtCallSite()
+    {
+        var source = new StructuredTask<(int, int)>(Task.FromResult((2, 3)), CancellationToken.None);
+        source.CancellationTokenSource.Cancel();
+        Assert.ThrowsAny<OperationCanceledException>(() => { _ = source.I((int a, int b) => Task.FromResult(a + b)); });
+    }
+
+    // Cancellation requested between chaining and the source completing must skip the projection and
+    // complete the chain as canceled (previously the plain awaits ran the projection and completed
+    // successfully despite Cancel()).
+    [Fact]
+    public async Task I_TupleStructuredTaskSource_SyncFunc_CancellationDuringSource_SkipsFuncAndCancels()
+    {
+        var funcRan = false;
+        var sourceTcs = new TaskCompletionSource<(int, int)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = new StructuredTask<(int, int)>(sourceTcs.Task, CancellationToken.None);
+        var chain = source.I((int a, int b) => { funcRan = true; return a + b; });
+
+        chain.CancellationTokenSource.Cancel();
+        sourceTcs.SetResult((2, 3));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await chain);
+        Assert.False(funcRan);
+    }
+
+    [Fact]
+    public async Task I_TupleStructuredTaskSource_AsyncFunc_CancellationDuringSource_SkipsFuncAndCancels()
+    {
+        var funcRan = false;
+        var sourceTcs = new TaskCompletionSource<(int, int)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = new StructuredTask<(int, int)>(sourceTcs.Task, CancellationToken.None);
+        var chain = source.I((int a, int b) => { funcRan = true; return Task.FromResult(a + b); });
+
+        chain.CancellationTokenSource.Cancel();
+        sourceTcs.SetResult((2, 3));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await chain);
+        Assert.False(funcRan);
+    }
+
     // --- Await: cancellation and fault propagation ----------------------------------------------
 
     // Await's up-front cancellation check runs synchronously, so an already-cancelled chain throws from
