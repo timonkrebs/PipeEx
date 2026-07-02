@@ -66,6 +66,18 @@ public class StructuredConcurrencyCoreTests
         Assert.Throws<ObjectDisposedException>(() => result.CancellationTokenSource.Token.ThrowIfCancellationRequested());
     }
 
+    // The token-bridging ctor owns the linked CancellationTokenSource it creates, so disposing the
+    // StructuredTask disposes it — releasing the registration the linked source holds on the external
+    // token (previously nothing owned it and that registration leaked).
+    [Fact]
+    public void Ctor_ExternalToken_OwnsLinkedCts_DisposeReleasesIt()
+    {
+        using var external = new CancellationTokenSource();
+        var structuredTask = new StructuredTask<int>(Task.FromResult(5), external.Token);
+        structuredTask.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => structuredTask.CancellationTokenSource.Token.ThrowIfCancellationRequested());
+    }
+
     // --- -> StructuredTask path (ChainInnerStructured): disposal and fault ----------------------
 
     [Fact]
@@ -136,6 +148,7 @@ public class StructuredConcurrencyCoreTests
         sourceTcs.SetResult((2, 3));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await chain);
+        Assert.True(((Task<int>)chain).IsCanceled);
         Assert.False(funcRan);
     }
 
@@ -151,6 +164,7 @@ public class StructuredConcurrencyCoreTests
         sourceTcs.SetResult((2, 3));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await chain);
+        Assert.True(((Task<int>)chain).IsCanceled);
         Assert.False(funcRan);
     }
 
@@ -179,6 +193,7 @@ public class StructuredConcurrencyCoreTests
         sourceTcs.SetResult(5);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await deferred);
+        Assert.True(((Task<int>)deferred).IsCanceled);
     }
 
     [Fact]

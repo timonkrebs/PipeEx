@@ -299,7 +299,24 @@ public static class ResultChainingWithCancellation
         var remainingTasksCanceller = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         var currentSuccess = successOrFailure.SuccessValue;
-        var runningTasks = tasks.Select(task => task(currentSuccess, remainingTasksCanceller.Token)).ToList();
+        var runningTasks = new List<Task<Result<TSuccess, TFailure>>>(tasks.Length);
+        try
+        {
+            foreach (var task in tasks)
+                runningTasks.Add(task(currentSuccess, remainingTasksCanceller.Token));
+        }
+        catch
+        {
+            // A factory that throws synchronously must not abandon the jobs already started: signal
+            // them to stop, observe their outcomes, and dispose the linked source once they finish.
+            remainingTasksCanceller.Cancel();
+            _ = Task.WhenAll(runningTasks).ContinueWith(
+                t => { _ = t.Exception; remainingTasksCanceller.Dispose(); },
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+            throw;
+        }
         var winner = await Task.WhenAny(runningTasks).ConfigureAwait(false);
 
         // Signal cancellation to the losing jobs as soon as the first job completes, even if the

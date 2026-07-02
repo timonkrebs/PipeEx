@@ -239,6 +239,107 @@ public class StructuredConcurrencyCancellationTests
         Assert.Equal("sync boom", ex.Message);
     }
 
+    // --- Cancellation reaches through StructuredTask-returning boundaries ---------------------------
+    // Chaining through a StructuredTask-returning func/factory shares the source's
+    // CancellationTokenSource (a linked child source would only propagate downstream), so cancelling
+    // the final pipe interrupts a token-aware job that is already running upstream of the boundary.
+
+    [Fact]
+    public async Task I_StructuredBoundary_CancellingDownstreamPipeInterruptsUpstreamTokenJob()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var upstream = 5.I(async (int v, CancellationToken ct) =>
+        {
+            started.SetResult();
+            await Task.Delay(Timeout.Infinite, ct);
+            return v;
+        });
+        var pipe = upstream.I(StructuredDouble);
+
+        Assert.Same(upstream.CancellationTokenSource, pipe.CancellationTokenSource);
+
+        await started.Task;
+        pipe.CancellationTokenSource.Cancel();
+        await AwaitCanceledPromptly(pipe);
+    }
+
+    [Fact]
+    public async Task Let_StructuredFactory_CancellingChainInterruptsUpstreamTokenJob()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var upstream = 5.I(async (int v, CancellationToken ct) =>
+        {
+            started.SetResult();
+            await Task.Delay(Timeout.Infinite, ct);
+            return v;
+        });
+        var joined = upstream.Let(StructuredDouble).Await((s, d) => s + d);
+
+        Assert.Same(upstream.CancellationTokenSource, joined.CancellationTokenSource);
+
+        await started.Task;
+        joined.CancellationTokenSource.Cancel();
+        await AwaitCanceledPromptly(joined);
+    }
+
+    [Fact]
+    public async Task I_TupleStructuredBoundary_CancellingDownstreamPipeInterruptsUpstreamTokenJob()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var upstream = (2, 3).I(async (int a, int b, CancellationToken ct) =>
+        {
+            started.SetResult();
+            await Task.Delay(Timeout.Infinite, ct);
+            return (a, b);
+        });
+        var pipe = upstream.I((int a, int b) => StructuredDouble(a + b));
+
+        Assert.Same(upstream.CancellationTokenSource, pipe.CancellationTokenSource);
+
+        await started.Task;
+        pipe.CancellationTokenSource.Cancel();
+        await AwaitCanceledPromptly(pipe);
+    }
+
+    // A chain must complete as canceled even when the structured stage it relayed cancellation into
+    // ignores its token and completes normally (RunInnerStructured's trailing check) — previously the
+    // chain completed successfully despite Cancel().
+    [Fact]
+    public async Task I_StructuredFactory_InnerIgnoresRelayedCancellation_ChainStillCompletesCanceled()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var chain = Task.FromResult(5).I(v => IgnoringInner(v, started, gate));
+
+        await started.Task;
+        chain.CancellationTokenSource.Cancel();
+        gate.SetResult();
+
+        await AwaitCanceledPromptly(chain);
+    }
+
+    // Cancellation reaches a second token-aware Let while it runs (the deferred-source token overload
+    // shares the chain's CancellationTokenSource).
+    [Fact]
+    public async Task Let_SecondTokenDeferred_CancellingChainInterruptsInFlightWork()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = new StructuredTask<int>(Task.FromResult(1), CancellationToken.None);
+        var joined = source
+            .Let((int v, CancellationToken ct) => Task.FromResult(v + 10))
+            .Let(async (int v, CancellationToken ct) =>
+            {
+                started.SetResult();
+                await Task.Delay(Timeout.Infinite, ct);
+                return v;
+            })
+            .Await((s, a, b) => s + a + b);
+
+        await started.Task;
+        joined.CancellationTokenSource.Cancel();
+        await AwaitCanceledPromptly(joined);
+    }
+
     // --- Tuple sources: the same token flows through the generated tuple I overloads ----------------
 
     [Fact]
@@ -270,6 +371,34 @@ public class StructuredConcurrencyCancellationTests
         await AwaitCanceledPromptly(chain);
     }
 
+    [Fact]
+    public Task I_ValueTupleSource_TokenJob_CancellingChainInterruptsInFlightWork()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var chain = (2, 3).I(async (int a, int b, CancellationToken ct) =>
+        {
+            started.SetResult();
+            await Task.Delay(Timeout.Infinite, ct);
+            return a + b;
+        });
+
+        return Cancel(chain, started);
+    }
+
+    [Fact]
+    public Task I_TaskTupleSource_TokenJob_CancellingChainInterruptsInFlightWork()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var chain = Task.FromResult((2, 3)).I(async (int a, int b, CancellationToken ct) =>
+        {
+            started.SetResult();
+            await Task.Delay(Timeout.Infinite, ct);
+            return a + b;
+        });
+
+        return Cancel(chain, started);
+    }
+
     // The generated tuple overloads route every await through the same CheckedAwait path as the scalar
     // overloads, so cancellation is honoured even when the tuple job ignores the token it was handed.
 
@@ -291,6 +420,7 @@ public class StructuredConcurrencyCancellationTests
         sourceTcs.SetResult((2, 3));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await chain);
+        Assert.True(((Task<int>)chain).IsCanceled);
         Assert.False(jobInvoked);
     }
 
@@ -313,6 +443,7 @@ public class StructuredConcurrencyCancellationTests
         release.SetResult();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await chain);
+        Assert.True(((Task<int>)chain).IsCanceled);
     }
 
     // The token-aware StructuredTask tuple overload runs its up-front cancellation check synchronously,
@@ -324,6 +455,73 @@ public class StructuredConcurrencyCancellationTests
         source.CancellationTokenSource.Cancel();
         Assert.ThrowsAny<OperationCanceledException>(
             () => { _ = source.I((int a, int b, CancellationToken ct) => Task.FromResult(a + b)); });
+    }
+
+    // --- Await / Let failure-path contracts ----------------------------------------------------------
+
+    // When an earlier deferred faults, the first failure propagates (the deferred the projection never
+    // reached is observed in the background rather than surfacing as an unobserved-task exception).
+    [Fact]
+    public async Task Await_BothDeferredsFault_FirstFailurePropagates()
+    {
+        var chain = 1.Let(() => ThrowAsync("first")).Let(() => ThrowAsync("second")).Await((s, a, b) => s + a + b);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await chain);
+        Assert.Equal("first", ex.Message);
+    }
+
+    // A deferred chain that dies with a foreign-token OperationCanceledException (e.g. an HttpClient
+    // timeout) completes as canceled — and, unlike a fault, does not cancel the chain's own
+    // CancellationTokenSource.
+    [Fact]
+    public async Task Let_ValueToDeferredChain_ForeignTokenCancellation_CompletesAsCanceled()
+    {
+        using var foreign = new CancellationTokenSource();
+        foreign.Cancel();
+        var foreignToken = foreign.Token;
+
+        var deferred = 5.Let(x => 7.Let(() => ThrowForeignOceAsync(foreignToken)));
+        var joined = deferred.Await((s, d) => s + d);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await joined);
+        Assert.True(((Task<int>)joined).IsCanceled);
+        Assert.False(joined.CancellationTokenSource.IsCancellationRequested);
+    }
+
+    // Await transfers CancellationTokenSource ownership from the deferred chain to its result, so
+    // disposing the intermediate no longer disposes the shared source out from under the live result.
+    [Fact]
+    public async Task Await_TransfersCtsOwnership_DisposingIntermediateKeepsResultUsable()
+    {
+        var deferred = 1.Let(v => Task.FromResult(v + 1));
+        var joined = deferred.Await((s, d) => s + d);
+        deferred.Dispose();
+
+        joined.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        Assert.Equal(3, await joined);
+
+        joined.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => joined.CancellationTokenSource.Token.ThrowIfCancellationRequested());
+    }
+
+    private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
+
+    private static async StructuredTask<int> IgnoringInner(int v, TaskCompletionSource started, TaskCompletionSource gate)
+    {
+        started.SetResult();
+        await gate.Task;   // a plain async StructuredTask body that never observes any token
+        return v * 2;
+    }
+
+    private static async Task<int> ThrowAsync(string message)
+    {
+        await Task.Yield();
+        throw new InvalidOperationException(message);
+    }
+
+    private static async Task<int> ThrowForeignOceAsync(CancellationToken foreignToken)
+    {
+        await Task.Yield();
+        throw new OperationCanceledException(foreignToken);
     }
 
     // Cancels the chain once its job is in flight and asserts the job was interrupted (not run to

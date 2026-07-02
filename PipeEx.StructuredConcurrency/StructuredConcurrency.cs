@@ -37,13 +37,14 @@ public static class StructuredConcurrency
         => new StructuredTask<TResult>(CheckedChain(source, func), source);
 
     public static StructuredTask<TResult> I<TSource, TResult>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
-        => ChainTupleToStructured(source.Task, func, CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token));
+        => ChainStructuredToStructured(source, func);
 
     // --- Cancellation-aware I overloads: flow the pipe's token into the running job --------------
     // These mirror the awaiting I overloads above, but hand the carried CancellationToken to the job so
     // a running operation can observe cancellation and stop in flight, not only between stages. The
-    // token still gates each await (via CheckedAwait), so a job that ignores the token it was handed is
-    // nonetheless abandoned at its next await once cancellation is requested.
+    // token still gates each await (via CheckedAwait), so even a job that ignores the token it was
+    // handed cannot complete the chain successfully: the chain waits for the job to finish, then the
+    // checkpoint after it discards the result and completes the chain as canceled.
 
     // Value source: opens a pipe owning a fresh CancellationTokenSource and hands its token to the job.
     public static StructuredTask<TResult> I<TSource, TResult>(this TSource source, Func<TSource, CancellationToken, Task<TResult>> func)
@@ -90,6 +91,14 @@ public static class StructuredConcurrency
     }
 
     /// <summary>
+    /// Attaches a continuation that reads (and thereby observes) the task's exception, so a deferred
+    /// result abandoned by an earlier failure cannot raise <see cref="TaskScheduler.UnobservedTaskException"/>.
+    /// </summary>
+    private static void Observe(Task task) =>
+        _ = task.ContinueWith(static t => _ = t.Exception, CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+    /// <summary>
     /// Awaits <paramref name="source"/> and applies <paramref name="map"/>, observing the source's
     /// cancellation token before and after each await. Shared by the <see cref="StructuredTask{T}"/>-source
     /// <c>I</c> and <c>Let</c> overloads so the cancellation-check pattern lives in one place. The up-front
@@ -118,8 +127,9 @@ public static class StructuredConcurrency
     /// hands the source's cancellation token to <paramref name="map"/> so the chained job can observe
     /// cancellation and stop while it runs, not only between stages. The token is still observed before
     /// and after each await, so the up-front (synchronous) check still throws from the chaining call on
-    /// an already-cancelled source, and a job that ignores the token it was handed is still abandoned at
-    /// its next await. NOTE: the generated <c>StructuredTask</c>-tuple token <c>I</c> overloads
+    /// an already-cancelled source, and even a job that ignores the token it was handed cannot complete
+    /// the chain successfully — the checkpoint after it discards the result and completes the chain as
+    /// canceled. NOTE: the generated <c>StructuredTask</c>-tuple token <c>I</c> overloads
     /// (TupleDestructuringGenerator) inline this pattern — keep them in sync when changing it.
     /// </summary>
     private static Task<TResult> CheckedChain<TSource, TResult>(StructuredTask<TSource> source, Func<TSource, CancellationToken, Task<TResult>> map)
@@ -146,7 +156,14 @@ public static class StructuredConcurrency
         {
             using var innerRegistration = cts.Token.Register(() => innerStructuredTask.CancellationTokenSource.Cancel());
             var result = await innerStructuredTask.ConfigureAwait(false);
-            tcs.TrySetResult(result);
+            // The inner pipe may ignore the cancellation relayed into it (e.g. a plain async
+            // StructuredTask method whose body never observes its token) and complete normally; a chain
+            // whose CancellationTokenSource was cancelled must still complete as canceled, matching the
+            // trailing-checkpoint contract of the Task-returning overloads.
+            if (cts.IsCancellationRequested)
+                tcs.TrySetCanceled(cts.Token);
+            else
+                tcs.TrySetResult(result);
         }
         catch (OperationCanceledException)
         {
@@ -227,6 +244,23 @@ public static class StructuredConcurrency
     internal static StructuredTask<TResult> ChainTupleToStructured<TTuple, TResult>(Task<TTuple> source, Func<TTuple, StructuredTask<TResult>> func, CancellationTokenSource cts)
         => new StructuredTask<TResult>(ChainInnerStructured(source, func, cts), cts);
 
+    /// <summary>
+    /// Chains a StructuredTask-returning factory onto a <see cref="StructuredTask{T}"/> source, sharing
+    /// the source's <see cref="CancellationTokenSource"/> (with ownership transfer) rather than linking a
+    /// child source. Linked sources propagate cancellation one way only (parent to child), so a linked
+    /// chain could never cancel upstream stages: cancelling the returned pipe would leave a token-aware
+    /// upstream job running — and hang the pipe outright when that job only completes via its token.
+    /// Sharing keeps the whole pipe on one CancellationTokenSource, matching the Task-returning overloads.
+    /// Used by the scalar and generated tuple <c>StructuredTask -&gt; StructuredTask</c> <c>I</c> overloads.
+    /// </summary>
+    internal static StructuredTask<TResult> ChainStructuredToStructured<TSource, TResult>(StructuredTask<TSource> source, Func<TSource, StructuredTask<TResult>> func)
+    {
+        var cts = source.CancellationTokenSource;
+        var result = new StructuredTask<TResult>(ChainInnerStructured(source.Task, func, cts), cts);
+        source.MustHandleDisposing = false;
+        return result;
+    }
+
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<Task<TDeferred>> func) =>
         new StructuredDeferredTask<TSource, TDeferred>(Task.FromResult(source), func());
 
@@ -280,6 +314,18 @@ public static class StructuredConcurrency
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<TSource, CancellationToken, Task<TDeferred2>> func)
         => new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, CheckedChain(source, func));
 
+    // A StructuredTask-returning factory chained onto a deferred task must also keep the earlier
+    // deferred: without this overload it binds the StructuredTask-source Let via inheritance and the
+    // earlier deferred is silently dropped (never awaited). Mirrors the Task-returning deferred-source
+    // overload above; the chain's CancellationTokenSource is shared through the two-deferred carrier.
+    [OverloadResolutionPriority(2)]
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<TSource, StructuredTask<TDeferred2>> func)
+    {
+        var cts = source.CancellationTokenSource;
+        cts.Token.ThrowIfCancellationRequested();
+        return new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, ChainInnerStructured(source.Task, func, cts, deferStart: true));
+    }
+
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2>(this StructuredDeferredTask<TSource, TDeferred1> source, Func<Task<TDeferred2>> func) =>
         new StructuredDeferredTask<TSource, TDeferred1, TDeferred2>(source, func());
 
@@ -303,6 +349,13 @@ public static class StructuredConcurrency
     public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<TSource, CancellationToken, Task<TDeferred3>> func)
         => throw new NotSupportedException();
 
+    // ...and likewise for a StructuredTask-returning factory, which would otherwise bind to the
+    // two-deferred structured overload (via inheritance) and silently drop both deferreds.
+    [OverloadResolutionPriority(3)]
+    [Obsolete("async-let carries at most two deferred values; Await the chain before adding another Let.", true)]
+    public static StructuredDeferredTask<TSource, TDeferred1, TDeferred2> Let<TSource, TDeferred1, TDeferred2, TDeferred3>(this StructuredDeferredTask<TSource, TDeferred1, TDeferred2> source, Func<TSource, StructuredTask<TDeferred3>> func)
+        => throw new NotSupportedException();
+
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this TSource source, Func<TSource, StructuredTask<TDeferred>> func)
     {
         // Invoke the factory eagerly so its synchronous exceptions surface at the Let call site, matching
@@ -317,9 +370,14 @@ public static class StructuredConcurrency
     [OverloadResolutionPriority(1)]
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TDeferred>(this StructuredTask<TSource> source, Func<TSource, StructuredTask<TDeferred>> func)
     {
-        source.CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(source.CancellationTokenSource.Token);
-        return new StructuredDeferredTask<TSource, TDeferred>(source.Task, ChainInnerStructured(source.Task, func, cts, deferStart: true), cts);
+        // Share the source's CancellationTokenSource (with ownership transfer) instead of linking a
+        // child source: linking is one-way, so cancelling the returned chain could never reach the
+        // upstream stages (see ChainStructuredToStructured).
+        var cts = source.CancellationTokenSource;
+        cts.Token.ThrowIfCancellationRequested();
+        var result = new StructuredDeferredTask<TSource, TDeferred>(source.Task, ChainInnerStructured(source.Task, func, cts, deferStart: true), cts);
+        source.MustHandleDisposing = false;
+        return result;
     }
 
     public static StructuredDeferredTask<TSource, TDeferred> Let<TSource, TSource2, TDeferred>(this TSource source, Func<TSource, StructuredDeferredTask<TSource2, TDeferred>> func)
@@ -334,7 +392,10 @@ public static class StructuredConcurrency
                 await Task.Yield();
                 var result = await innerDeferredTask.deferredTask1.ConfigureAwait(false);
                 deferredCompletionSource.SetResult(result);
-            } catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token || ex.CancellationToken == innerDeferredTask.CancellationTokenSource.Token) {
+            } catch (OperationCanceledException) {
+                // Any cancellation completes the deferred as canceled regardless of which token the
+                // exception carries (a foreign token, e.g. an HttpClient timeout, is still a
+                // cancellation), matching RunInnerStructured and ChainInnerStructured.
                 deferredCompletionSource.SetCanceled(cts.Token);
             } catch (Exception ex) {
                 deferredCompletionSource.SetException(ex);
@@ -363,20 +424,35 @@ public static class StructuredConcurrency
         ct.ThrowIfCancellationRequested();
         var impl = async () =>
         {
-            var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
-            var d = await source.deferredTask1.CheckedAwait(ct).ConfigureAwait(false);
-            var f = func(s, d);
-            ct.ThrowIfCancellationRequested();
-            return f;
+            try
+            {
+                var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
+                var d = await source.deferredTask1.CheckedAwait(ct).ConfigureAwait(false);
+                var f = func(s, d);
+                ct.ThrowIfCancellationRequested();
+                return f;
+            }
+            catch
+            {
+                // The first failure (or cancellation) propagates, but a deferred result this projection
+                // never reached must still be observed so its fault cannot surface as an
+                // UnobservedTaskException. Observing an already-consumed task is a no-op.
+                Observe(source.deferredTask1);
+                throw;
+            }
         };
 
-        return new StructuredDeferredTask<TResult, TDeferredSource>(impl(), source.deferredTask1, source.CancellationTokenSource);
+        var result = new StructuredDeferredTask<TResult, TDeferredSource>(impl(), source.deferredTask1, source.CancellationTokenSource);
+        source.MustHandleDisposing = false;
+        return result;
     }
 
     /// <summary>
     /// Awaits the source and both deferred results and projects them with <paramref name="func"/>.
-    /// Every deferred result is awaited so that all of their exceptions are observed; the projection
-    /// is free to ignore any argument it does not need (e.g. by using a discard parameter).
+    /// On success every deferred result is awaited; when an earlier await fails, the first failure
+    /// propagates and the deferred results the projection never reached are still observed (their
+    /// faults cannot surface as unobserved task exceptions). The projection is free to ignore any
+    /// argument it does not need (e.g. by using a discard parameter).
     /// </summary>
     /// <typeparam name="TSource">The type of the source object.</typeparam>
     /// <typeparam name="TDeferredSource1">The type of the first deferred result.</typeparam>
@@ -391,14 +467,35 @@ public static class StructuredConcurrency
         ct.ThrowIfCancellationRequested();
         var impl = async () =>
         {
-            var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
-            var d1 = await source.deferredTask1.CheckedAwait(ct).ConfigureAwait(false);
-            var d2 = await source.deferredTask2.CheckedAwait(ct).ConfigureAwait(false);
-            var f = func(s, d1, d2);
-            ct.ThrowIfCancellationRequested();
-            return f;
+            try
+            {
+                var s = await source.Task.CheckedAwait(ct).ConfigureAwait(false);
+                var d1 = await source.deferredTask1.CheckedAwait(ct).ConfigureAwait(false);
+                var d2 = await source.deferredTask2.CheckedAwait(ct).ConfigureAwait(false);
+                var f = func(s, d1, d2);
+                ct.ThrowIfCancellationRequested();
+                return f;
+            }
+            catch
+            {
+                // See the two-argument Await: deferred results the projection never reached must still
+                // be observed so their faults cannot surface as UnobservedTaskException.
+                Observe(source.deferredTask1);
+                Observe(source.deferredTask2);
+                throw;
+            }
         };
 
-        return new StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2>(impl(), source.deferredTask1, source.deferredTask2, source.CancellationTokenSource);
+        var result = new StructuredDeferredTask<TResult, TDeferredSource1, TDeferredSource2>(impl(), source.deferredTask1, source.deferredTask2, source.CancellationTokenSource);
+        source.MustHandleDisposing = false;
+        return result;
     }
+
+    // A two-argument projection on a two-deferred chain would bind the inherited two-argument Await and
+    // silently orphan the second deferred (never awaited, its fault unobserved), so make it a loud
+    // compile error: use the three-argument projection and discard what you do not need.
+    [OverloadResolutionPriority(2)]
+    [Obsolete("this chain carries two deferred values; use the three-argument Await projection and discard any value you do not need.", true)]
+    public static StructuredDeferredTask<TResult, TDeferredSource1> Await<TSource, TDeferredSource1, TDeferredSource2, TResult>(this StructuredDeferredTask<TSource, TDeferredSource1, TDeferredSource2> source, Func<TSource, TDeferredSource1, TResult> func)
+        => throw new NotSupportedException();
 }

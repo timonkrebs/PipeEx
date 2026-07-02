@@ -11,7 +11,8 @@ namespace PipeEx.SourceGenerators;
 /// compilation's assembly name so each assembly receives only the class that belongs to it:
 /// <list type="bullet">
 /// <item><c>PipeEx</c> gets the synchronous tuple-destructuring <c>I</c> overloads.</item>
-/// <item><c>PipeEx.StructuredConcurrency</c> gets the eight StructuredTask <c>I</c> overloads per arity.</item>
+/// <item><c>PipeEx.StructuredConcurrency</c> gets the eleven StructuredTask <c>I</c> overloads per arity
+/// (eight token-free and three cancellation-aware).</item>
 /// </list>
 /// Tuples carry 2..13 elements, matching the original scripts (<c>seq 1 12</c>, arity = item + 1).
 /// </summary>
@@ -141,7 +142,9 @@ public sealed class TupleDestructuringGenerator : IIncrementalGenerator
             sb.AppendLine($"        => StructuredConcurrency.ChainTupleToStructured(s, t => func({targ}), new CancellationTokenSource());");
             sb.AppendLine();
             sb.AppendLine($"    public static StructuredTask<TResult> I<{ty}, TResult>(this StructuredTask<({ty})> s, Func<{ty}, StructuredTask<TResult>> func)");
-            sb.AppendLine($"        => StructuredConcurrency.ChainTupleToStructured(s.Task, t => func({targ}), CancellationTokenSource.CreateLinkedTokenSource(s.CancellationTokenSource.Token));");
+            sb.AppendLine("        // Shares the source's CancellationTokenSource (ownership transfer) so cancelling the returned");
+            sb.AppendLine("        // pipe reaches upstream stages — a linked child source would only propagate downstream.");
+            sb.AppendLine($"        => StructuredConcurrency.ChainStructuredToStructured(s, t => func({targ}));");
 
             // Cancellation-aware tuple overloads: destructure the source and hand the carried token to the
             // job (the value/Task sources own a fresh CancellationTokenSource; the StructuredTask source

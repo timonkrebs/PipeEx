@@ -75,10 +75,11 @@ public int Calc(int x) => x.I(x => (x + 2, x + 4))
 
 ### Asynchronous Operations
 
-PipeEx supports chaining asynchronous operations. The library automatically handles awaiting tasks:
+`PipeEx.StructuredConcurrency` extends the pipe to asynchronous operations (the base `PipeEx` package
+is synchronous only). The library automatically handles awaiting tasks:
 
 ```csharp
-// awaiting is handled automatically
+// awaiting is handled automatically (requires PipeEx.StructuredConcurrency)
 public Task<int> Calc(int x) => x.I(FuncXAsync)
                                  .I(x => x + 2)
                                  .I(FuncYAsync)
@@ -152,6 +153,7 @@ into this:
 ```csharp
 public async Task<Result<WeatherReport, Failure>> Handle(string region, DateTime date) =>
     await WeatherReport.Create(region, date)
+        .ToSuccess<WeatherReport, Failure>()
         .Then(regionValidator.ValidateRegion)
         .Then(dateChecker.CheckDate)
         .Then(cache.TryPopulate)
@@ -231,8 +233,9 @@ public Task<int> Combine(int x) =>
      .Await((source, a, b) => source + a + b);
 ```
 
-`Await` awaits the source and every deferred result, so all of their exceptions are observed. The
-projection is free to ignore any argument it does not need:
+`Await` awaits the source and every deferred result; the first failure propagates, and any deferred
+result the projection never reached is still observed in the background (so nothing surfaces as an
+unobserved task exception). The projection is free to ignore any argument it does not need:
 
 ```csharp
 x.Let(() => LoadAAsync(x))
