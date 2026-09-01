@@ -23,8 +23,11 @@ public class StructuredTask<T> : StructuredTask, IDisposable
     public StructuredTask(Task<T> task, StructuredTask previousTask)
         : this(task, previousTask.CancellationTokenSource) { previousTask.MustHandleDisposing = false; }
 
+    // Owns the linked source it creates: disposing the StructuredTask releases the registration the
+    // linked source holds on the external token. (With mustHandleDisposing: false nothing ever owned
+    // it, so that registration leaked for the external token's lifetime.)
     public StructuredTask(Task<T> task, CancellationToken cancellationToken)
-        : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken), false) { }
+        : this(task, CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) { }
 
     internal StructuredTask(Task<T> task) : this(task, new CancellationTokenSource()) { }
 

@@ -110,23 +110,33 @@ public class StructuredConcurrencyTests
         })
         .Assert(async structuredTask => await Assert.ThrowsAsync<TaskCanceledException>(async () => await structuredTask));
 
+    // The middle stage is gated on a TaskCompletionSource released only after Cancel(), so a
+    // cancellation checkpoint always observes the cancel — a fixed Task.Delay would race the test
+    // thread's Cancel() call and could complete the chain first on a slow scheduler. Asserts the
+    // semantic contract (canceled, surfacing an OperationCanceledException) rather than the exact
+    // exception subtype, which depends on which stage's checkpoint observes the cancellation first.
     [Fact]
     public Task Test8_Ensure_CancellationTokenSource_Cancellation() =>
-        Arrange(() => 1)
-        .Act(x =>
+        Arrange(() => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously))
+        .Act(gate =>
         {
-            var structuredTask = x.I<int, int>(val => Task.FromResult(val * 2))
+            var structuredTask = 1.I<int, int>(val => Task.FromResult(val * 2))
             .I(async x =>
             {
-                await Task.Delay(10);
+                await gate.Task;
                 return x + 1;
             })
             .I(x => x + 1);
 
             structuredTask.CancellationTokenSource.Cancel();
+            gate.SetResult();
             return structuredTask;
         })
-        .Assert(async structuredTask => await Assert.ThrowsAsync<OperationCanceledException>(async () => await structuredTask));
+        .Assert(async structuredTask =>
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await structuredTask);
+            Assert.True(((Task<int>)structuredTask).IsCanceled);
+        });
 
     // The wrapper overloads (Task -> StructuredTask and StructuredTask -> StructuredTask) must observe source
     // cancellation whether the source is already canceled BEFORE chaining (Test9/Test10) or cancels LATER

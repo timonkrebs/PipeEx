@@ -86,6 +86,15 @@ public class StructuredConcurrencyChainingTests
         .Act(x => x.Let(() => Task.FromResult(10)).Let(v => Task.FromResult(v + 100)).Await((src, a, b) => src + a + b))
         .Assert(async r => Assert.Equal(112, await r));
 
+    // The same must hold for a StructuredTask-returning factory: without its own deferred-source
+    // overload it would bind the StructuredTask-source Let via inheritance and silently drop the
+    // earlier deferred (1 + 10 + 101).
+    [Fact]
+    public Task Let_DeferredChain_StructuredFactory_PreservesIntermediateDeferred() =>
+        Arrange(() => 1)
+        .Act(x => x.Let(() => Task.FromResult(10)).Let(v => StructuredPlus100(v)).Await((src, a, b) => src + a + b))
+        .Assert(async r => Assert.Equal(112, await r));
+
     // A deferred Let must thread the source's CancellationTokenSource into the extended chain (rather
     // than a fresh one) so that cancelling the final task reaches the newly added deferred stage.
     [Fact]
@@ -159,6 +168,7 @@ public class StructuredConcurrencyChainingTests
     }
 
     private static StructuredTask<int> StructuredDouble(int v) => v.I<int, int>(w => Task.FromResult(w * 2));
+    private static StructuredTask<int> StructuredPlus100(int v) => v.I<int, int>(w => Task.FromResult(w + 100));
     private static StructuredTask<int> StructuredThrow(int v) => v.I<int, int>(async _ => { await Task.Yield(); throw new InvalidOperationException("boom"); });
     private static StructuredTask<int> CanceledStructuredFactory(int v) => throw new OperationCanceledException();
     private static StructuredTask<int> StructuredThrowSync(int v) => throw new InvalidOperationException("sync boom");
