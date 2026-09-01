@@ -10,7 +10,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" PrivateAssets="all" />
+    <!-- Source generators must reference the OLDEST Roslyn the supported toolchains ship: a generator
+         referencing a newer Microsoft.CodeAnalysis than the host compiler is skipped with only warning
+         CS9057 and every generated overload silently disappears. 4.8.0 loads everywhere (VS 17.8+, all
+         .NET 8/9/10 SDKs); the 5.x bumps break stock SDKs (e.g. Ubuntu's .NET 10 SDK hosts Roslyn 5.0)
+         and every NuGet consumer of PipeEx/PipeEx.StructuredConcurrency on such a toolchain. Repo CI
+         does not catch this: with no global.json, the build uses the runner image's newest preinstalled
+         SDK (Roslyn >= 5.6), not the 9.0.x that setup-dotnet requests. Do not let dependabot bump this
+         without deliberately raising the minimum supported toolchain. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
